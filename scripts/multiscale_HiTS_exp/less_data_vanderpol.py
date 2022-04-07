@@ -16,7 +16,7 @@ import ResNet as net
 
 # adjustables
 
-k = 2                       # model index: should be in {0, 2, ..., 10}
+k = 5                       # model index: should be in {0, 2, ..., 10}
 dt = 0.01                     # time unit: 0.0005 for Lorenz and 0.01 for others
 system = 'VanDerPol'         # system name: 'Hyperbolic', 'Cubic', 'VanDerPol', 'Hopf' or 'Lorenz'
 noise = 0.0                   # noise percentage: 0.00, 0.01 or 0.02
@@ -34,7 +34,7 @@ model_dir = os.path.join('../../models/', system)
 n_forward = 5
 step_size = 2**k
 
-percent_data_list = [1, 0.8, 0.6, 0.4, 0.2, 0.1, 0.05, 0.025]
+percent_data_list = [ 0.2, 0.1, 0.05, 0.025, 0.0125, 0.00625]
 
         
 # load data

@@ -16,13 +16,13 @@ import ResNet as net
 
 # adjustables
 
-k = 2                       # model index: should be in {0, 2, ..., 10}
+k = 4                       # model index: should be in {0, 2, ..., 10}
 dt = 0.01                     # time unit: 0.0005 for Lorenz and 0.01 for others
 system = 'Hyperbolic'         # system name: 'Hyperbolic', 'Cubic', 'VanDerPol', 'Hopf' or 'Lorenz'
 noise = 0.0                   # noise percentage: 0.00, 0.01 or 0.02
 
 lr = 1e-3                     # learning rate
-max_epoch = 50000            # the maximum training epoch 
+max_epoch = 30000            # the maximum training epoch 
 batch_size = 320              # training batch size
 arch = [2, 128, 128, 128, 2]  # architecture of the neural network
 
