@@ -16,7 +16,7 @@ import ResNet as net
 
 # adjustables
 
-k = 6                       # model index: should be in {0, 2, ..., 10}
+k = 3                       # model index: should be in {0, 2, ..., 10}
 dt = 0.01                     # time unit: 0.0005 for Lorenz and 0.01 for others
 system = 'Hyperbolic'         # system name: 'Hyperbolic', 'Cubic', 'VanDerPol', 'Hopf' or 'Lorenz'
 noise = 0.0                   # noise percentage: 0.00, 0.01 or 0.02

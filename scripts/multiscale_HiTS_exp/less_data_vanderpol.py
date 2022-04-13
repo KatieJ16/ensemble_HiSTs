@@ -52,10 +52,14 @@ print("test_data.shape = ", test_data.shape)
 for percent_data in percent_data_list:
 
     # create dataset object
-    dataset = net.DataSet(train_data[:int(n_train*percent_data)], val_data, test_data, dt, step_size, n_forward)
+    n_train_used = int(n_train*percent_data)
+    n_val_used = int(n_train_used * 0.25)
+    print('n_train_used = ', n_train_used)
+    print('n_val_used = ', n_val_used)
+    dataset = net.DataSet(train_data[:n_train_used], val_data[:n_val_used], test_data, dt, step_size, n_forward)
 
     #make and train
-    model_name = 'model_D{}_noise{}_data{}.pt'.format(step_size, noise, percent_data)
+    model_name = 'model_D{}_noise{}_data{}_valscaled.pt'.format(step_size, noise, percent_data)
 
     # # create/load model object
     try:
