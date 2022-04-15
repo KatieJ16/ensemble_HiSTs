@@ -311,6 +311,88 @@ class ResNet(torch.nn.Module):
         
 
         return loss1 + loss2
+    
+    
+    def train_net_single(self, dataset, max_epoch, batch_size, w=1.0, lr=1e-3, model_path=None):
+        """
+        :param dataset: a dataset object
+        :param max_epoch: maximum number of epochs
+        :param batch_size: batch size
+        :param w: l2 error weight
+        :param lr: learning rate
+        :param model_path: path to save the model
+        :return: None
+        """
+        # check consistency
+        self.check_data_info(dataset)
+
+        # training
+        optimizer = torch.optim.Adam(self.parameters(), lr=lr)
+        epoch = 0
+        best_loss = 1e+5
+        start_time = time.time()
+        while epoch < max_epoch:
+            epoch += 1
+            # ================= prepare data ==================
+            n_samples = dataset.n_train
+            new_idxs = torch.randperm(n_samples)
+            batch_x = dataset.train_x[new_idxs[:batch_size], :]
+            batch_ys = dataset.train_ys[new_idxs[:batch_size], :, :]
+            # =============== calculate losses ================
+            train_loss = self.calculate_loss_single(batch_x, batch_ys, w=w)
+            val_loss = self.calculate_loss_single(dataset.val_x, dataset.val_ys, w=w)
+            # ================ early stopping =================
+            if best_loss <= 1e-8:
+                print('--> model has reached an accuracy of 1e-8! Finished training!')
+                break
+            # =================== backward ====================
+            optimizer.zero_grad()
+            train_loss.backward()
+            optimizer.step()
+            # =================== log =========================
+            
+            if epoch == 10:
+                end_time = time.time()
+                print("time for first 10 = ", end_time - start_time)
+            
+            if epoch % 1000 == 0:
+                print('epoch {}, training loss {}, validation loss {}'.format(epoch, train_loss.item(),
+                                                                              val_loss.item()))
+                if val_loss.item() < best_loss:
+                    best_loss = val_loss.item()
+                    if model_path is not None:
+                        print('(--> new model saved @ epoch {})'.format(epoch))
+                        torch.save(self, model_path)
+
+        # if to save at the end
+        if val_loss.item() < best_loss and model_path is not None:
+            print('--> new model saved @ epoch {}'.format(epoch))
+            torch.save(self, model_path)
+
+    def calculate_loss_single(self, x, ys, w=1.0, type_scale = 'small'):
+        """
+        :param x: x batch, array of size batch_size x n_dim
+        :param ys: ys batch, array of size batch_size x n_steps x n_dim
+        :return: overall loss
+        """
+        batch_size, n_steps, n_dim = ys.size()
+        assert n_dim == self.n_dim
+
+        # forward (recurrence)
+        y_preds = torch.zeros(batch_size, n_steps, n_dim).float().to(self.device)
+        y_prev = x
+        for t in range(n_steps):
+            y_next = self.forward(y_prev, type_scale)
+            y_preds[:, t, :] = y_next
+            y_prev = y_next
+
+        # compute loss
+        criterion = torch.nn.MSELoss(reduction='none')
+        loss = w * criterion(y_preds, ys).mean() + (1-w) * criterion(y_preds, ys).max()
+
+        return loss
+    
+    
 
 
     def vectorized_multi_scale_forecast(self, x_init, n_steps, models, step_sizes = [8,4]):

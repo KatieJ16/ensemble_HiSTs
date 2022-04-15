@@ -16,7 +16,7 @@ import ResNet as net
 
 # adjustables
 
-k = 5                       # model index: should be in {0, 2, ..., 10}
+k = 4                       # model index: should be in {0, 2, ..., 10}
 dt = 0.01                     # time unit: 0.0005 for Lorenz and 0.01 for others
 system = 'VanDerPol'         # system name: 'Hyperbolic', 'Cubic', 'VanDerPol', 'Hopf' or 'Lorenz'
 
