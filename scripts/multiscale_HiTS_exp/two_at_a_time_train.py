@@ -52,6 +52,7 @@ for noise in [0.0, 0.01, 0.02, 0.05, 0.1, 0.2]:
     print("val_data shape = ", val_data.shape)
     print("test_data.shape = ", test_data.shape)
 
+    
     for step_size in [4,8,16,32]:
 #         step_size = 8
         n_forward = 5
@@ -60,21 +61,22 @@ for noise in [0.0, 0.01, 0.02, 0.05, 0.1, 0.2]:
 
         print(dataset.train_ys.shape)
 
-        #make and train
-        model_name = 'model_D{}_noise{}.pt'.format(step_size, noise)
+        for letter in ['a', 'b', 'c', 'd']:
+            #make and train
+            model_name = 'model_D{}_noise{}_{}.pt'.format(step_size, noise, letter)
 
-        # # create/load model object
-        try:
-            device = 'cuda' if torch.cuda.is_available() else 'cpu'
-            model = torch.load(os.path.join(model_dir, model_name), map_location=device)
-            model.device = device
-            print("model loaded ", model_name)
-        except:
+            # # create/load model object
+            try:
+                device = 'cuda' if torch.cuda.is_available() else 'cpu'
+                model = torch.load(os.path.join(model_dir, model_name), map_location=device)
+                model.device = device
+                print("model loaded ", model_name)
+            except:
 
-            # create/load model object
-            print('create model {} ...'.format(model_name))
-            model = net.ResNet(arch=arch, dt=dt, step_size=step_size)#, prev_models=prev_models)
+                # create/load model object
+                print('create model {} ...'.format(model_name))
+                model = net.ResNet(arch=arch, dt=dt, step_size=step_size)#, prev_models=prev_models)
 
-            # training
-        model.train_net(dataset, max_epoch=max_epoch, batch_size=batch_size, lr=lr,
-                        model_path=os.path.join(model_dir, model_name))
+                # training
+            model.train_net(dataset, max_epoch=max_epoch, batch_size=batch_size, lr=lr,
+                            model_path=os.path.join(model_dir, model_name))
