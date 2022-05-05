@@ -5,6 +5,7 @@ from utils_multiscale import DataSet
 import time
 import itertools
 import random
+import sys
 
 
 class NNBlock(torch.nn.Module):
@@ -75,7 +76,10 @@ class ResNet(torch.nn.Module):
             
         except: #or make it
             print("Couldn't Load")
+            sys.exit(1)
             self.all_combos = self.make_all_combos()
+            
+        self.best_loss = 1e+5
         
 #         self.count_times_picked = torch.zeros(1317)
         
@@ -181,7 +185,6 @@ class ResNet(torch.nn.Module):
         # training
         optimizer = torch.optim.Adam(self.parameters(), lr=lr)
         epoch = 0
-        best_loss = 1e+5
         start_time = time.time()
         while epoch < max_epoch:
             epoch += 1
@@ -194,7 +197,7 @@ class ResNet(torch.nn.Module):
             train_loss = self.calculate_loss(batch_x, batch_ys, w=w)
             val_loss = self.calculate_loss(dataset.val_x, dataset.val_ys, w=w)
             # ================ early stopping =================
-            if best_loss <= 1e-8:
+            if self.best_loss <= 1e-8:
                 print('--> model has reached an accuracy of 1e-8! Finished training!')
                 break
             # =================== backward ====================
@@ -210,8 +213,8 @@ class ResNet(torch.nn.Module):
             if epoch % print_every == 0:
                 print('epoch {}, training loss {}, validation loss {}'.format(epoch, train_loss.item(),
                                                                               val_loss.item()))
-            if val_loss.item() < best_loss:
-                best_loss = val_loss.item()
+            if val_loss.item() < self.best_loss:
+                self.best_loss = val_loss.item()
                 if model_path is not None:
                     print('(--> new model saved @ epoch {})'.format(epoch))
                     print('epoch {}, training loss {}, validation loss {}'.format(epoch, train_loss.item(),
@@ -220,7 +223,7 @@ class ResNet(torch.nn.Module):
                     torch.save(self, model_path)
 
         # if to save at the end
-        if val_loss.item() < best_loss and model_path is not None:
+        if val_loss.item() < self.best_loss and model_path is not None:
             print('--> new model saved @ epoch {}'.format(epoch))
             torch.save(self, model_path)
 
@@ -237,28 +240,15 @@ class ResNet(torch.nn.Module):
         criterion = torch.nn.MSELoss(reduction='none')
         loss = 0.0
                   
-#         start = time.time()
         possibilities = len(self.all_combos)
         
         for i in random.sample(range(possibilities), 25):
-#             self.count_times_picked[i] += 1
-#             num_moved = 0
             y_next = self.forward(x, str(self.all_combos[i][0]))
-#             num_moved += self.all_combos[i][0]
             for j in range(1, len(self.all_combos[i])):
-#                 num_moved += self.all_combos[i][j]
                 y_next = self.forward(y_next, str(self.all_combos[i][j]))
             #add the amount of loss
-#             print("ys idx = ", sum(self.all_combos[i])/4-1)
-#             print("(self.all_combos[i] = ", self.all_combos[i])
-#             print("num_moved = ", num_moved)
-#             print("self.all_combos[i] = ", sum(self.all_combos[i]))
-            loss += criterion(y_next, ys[:,sum(self.all_combos[i])/4 - 1,:])
+            loss += criterion(y_next, ys[:,sum(self.all_combos[i])/min(self.step_sizes) - 1,:])
                   
-        
-#         print(time.time() - start)
-#         hj
-#         print("loss.mean() = ", loss.mean())
         return loss.mean()
         
         
