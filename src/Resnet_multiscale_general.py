@@ -77,6 +77,7 @@ class ResNet(torch.nn.Module):
             print("Couldn't Load")
             self.all_combos = self.make_all_combos()
         
+#         self.count_times_picked = torch.zeros(1317)
         
     def make_all_combos(self, max_repeat=4, target_list=None):
         '''
@@ -209,11 +210,14 @@ class ResNet(torch.nn.Module):
             if epoch % print_every == 0:
                 print('epoch {}, training loss {}, validation loss {}'.format(epoch, train_loss.item(),
                                                                               val_loss.item()))
-                if val_loss.item() < best_loss:
-                    best_loss = val_loss.item()
-                    if model_path is not None:
-                        print('(--> new model saved @ epoch {})'.format(epoch))
-                        torch.save(self, model_path)
+            if val_loss.item() < best_loss:
+                best_loss = val_loss.item()
+                if model_path is not None:
+                    print('(--> new model saved @ epoch {})'.format(epoch))
+                    print('epoch {}, training loss {}, validation loss {}'.format(epoch, train_loss.item(),
+                                                                              val_loss.item()))
+                    print("model_path = ", model_path)
+                    torch.save(self, model_path)
 
         # if to save at the end
         if val_loss.item() < best_loss and model_path is not None:
@@ -235,15 +239,25 @@ class ResNet(torch.nn.Module):
                   
 #         start = time.time()
         possibilities = len(self.all_combos)
+        
         for i in random.sample(range(possibilities), 25):
+#             self.count_times_picked[i] += 1
+#             num_moved = 0
             y_next = self.forward(x, str(self.all_combos[i][0]))
-            for j in range(1, len(self.all_combos[i]) - 1):
+#             num_moved += self.all_combos[i][0]
+            for j in range(1, len(self.all_combos[i])):
+#                 num_moved += self.all_combos[i][j]
                 y_next = self.forward(y_next, str(self.all_combos[i][j]))
             #add the amount of loss
-            loss += criterion(y_next, ys[:,sum(self.all_combos[i])/4-1,:])
+#             print("ys idx = ", sum(self.all_combos[i])/4-1)
+#             print("(self.all_combos[i] = ", self.all_combos[i])
+#             print("num_moved = ", num_moved)
+#             print("self.all_combos[i] = ", sum(self.all_combos[i]))
+            loss += criterion(y_next, ys[:,sum(self.all_combos[i])/4 - 1,:])
                   
         
 #         print(time.time() - start)
+#         hj
 #         print("loss.mean() = ", loss.mean())
         return loss.mean()
         
