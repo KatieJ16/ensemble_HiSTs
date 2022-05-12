@@ -22,7 +22,7 @@ system = 'Lorenz'         # system name: 'Hyperbolic', 'Cubic', 'VanDerPol', 'Ho
 
 # step_sizes = [64, 128, 256]
 step_sizes = [4,8,16]
-for noise in [0.0, 0.01, 0.02, 0.05, 0.1, 0.2, ]:#, 0.01, 0.02, 0.05, 0.1, 0.2]:
+for noise in [0.0, 0.01, 0.02, ]:#, 0.01, 0.02, 0.05, 0.1, 0.2]:
 
     lr = 1e-3                     # learning rate
     max_epoch = 5000            # the maximum training epoch 

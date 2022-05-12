@@ -20,7 +20,7 @@ import Resnet_multiscale_general as net
 dt = 0.01                     # time unit: 0.0005 for Lorenz and 0.01 for others
 system = 'VanDerPol'         # system name: 'Hyperbolic', 'Cubic', 'VanDerPol', 'Hopf' or 'Lorenz'
 
-for noise in [0.05, 0.1, 0.2, 0.0, 0.01, 0.02, ]:#, 0.01, 0.02, 0.05, 0.1, 0.2]:
+for noise in [0.02, 0.05, 0.1, 0.2, 0.0, 0.01, ]:#, 0.01, 0.02, 0.05, 0.1, 0.2]:
 
     lr = 1e-3                     # learning rate
     max_epoch = 5000            # the maximum training epoch 
@@ -50,7 +50,7 @@ for noise in [0.05, 0.1, 0.2, 0.0, 0.01, 0.02, ]:#, 0.01, 0.02, 0.05, 0.1, 0.2]:
     
     for step_size in [4]:#,8,16,32]:
 
-        for letter in ['a']:#'b', 'c', 'd', 'e']:
+        for letter in ['b', 'c', 'd', 'e']:
             #make and train
             model_name = 'model_D{}_noise{}_{}.pt'.format(step_size, noise, letter)
 
