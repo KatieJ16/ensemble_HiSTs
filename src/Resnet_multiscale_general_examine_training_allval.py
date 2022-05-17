@@ -233,7 +233,7 @@ class ResNet(torch.nn.Module):
                 if val_loss_sum < self.best_loss:
                     self.best_loss = val_loss_sum
                     if model_dir is not None:
-                        model_path_this=os.path.join(model_dir, 'model_allval_n0.05_' + str(self.save_count) + '.pt')
+                        model_path_this=os.path.join(model_dir, 'model_allval_L1_n0.1_' + str(self.save_count) + '.pt')
                         self.save_count += 1                   
                         print('(--> new model saved @ epoch {})'.format(epoch))
                         print('epoch {}, training loss {}, val_loss_sum {}'.format(epoch, train_loss.item(),
@@ -271,7 +271,8 @@ class ResNet(torch.nn.Module):
 #         batch_size, n_dim = ys.size()
         assert n_dim == self.n_dim
     
-        criterion = torch.nn.MSELoss(reduction='none')
+#         criterion = torch.nn.MSELoss(reduction='none')
+        criterion = torch.nn.L1Loss(reduction='none')
         loss = 0.0
                   
         possibilities = len(self.all_combos)
