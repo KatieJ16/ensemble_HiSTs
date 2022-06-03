@@ -20,7 +20,7 @@ import Resnet_multiscale_general_examine_training as net
 dt = 0.01                     # time unit: 0.0005 for Lorenz and 0.01 for others
 system = 'Cos'         # system name: 'Hyperbolic', 'Cubic', 'VanDerPol', 'Hopf' or 'Lorenz'
 
-for noise in [0.02]:#, 0.01, 0.02, 0.05, 0.1, 0.2]:
+for noise in [0.1]:#, 0.01, 0.02, 0.05, 0.1, 0.2]:
 
     lr = 1e-3                     # learning rate
     max_epoch = 5000            # the maximum training epoch 
@@ -81,4 +81,4 @@ for noise in [0.02]:#, 0.01, 0.02, 0.05, 0.1, 0.2]:
         n_forward = 64/4
         dataset = net.DataSet(train_data, val_data, test_data, dt, step_size, n_forward)
         model.train_net(dataset, max_epoch=max_epoch, batch_size=batch_size, lr=lr,
-                        model_dir=model_dir,model_name_base='model_again_D' + str(step_size) + '_n' + str(noise) , print_every=10)
+                        model_dir=model_dir,model_name_base='model_D' + str(step_size) + '_n' + str(noise) , print_every=10)

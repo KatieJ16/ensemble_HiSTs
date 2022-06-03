@@ -171,7 +171,7 @@ class ResNet(torch.nn.Module):
 
         return y_preds
 
-    def train_net(self, dataset, max_epoch, batch_size, w=1.0, lr=1e-3, model_dir=None, print_every=1000):
+    def train_net(self, dataset, max_epoch, batch_size, w=1.0, lr=1e-3, model_dir=None,model_name_base='model', print_every=1000):
         """
         :param dataset: a dataset object
         :param max_epoch: maximum number of epochs
@@ -233,7 +233,7 @@ class ResNet(torch.nn.Module):
                 if val_loss_sum < self.best_loss:
                     self.best_loss = val_loss_sum
                     if model_dir is not None:
-                        model_path_this=os.path.join(model_dir, 'model_allval_L1_n0.1_' + str(self.save_count) + '.pt')
+                        model_path_this=os.path.join(model_dir, model_name_base+'_' + str(self.save_count) + '.pt')
                         self.save_count += 1                   
                         print('(--> new model saved @ epoch {})'.format(epoch))
                         print('epoch {}, training loss {}, val_loss_sum {}'.format(epoch, train_loss.item(),
