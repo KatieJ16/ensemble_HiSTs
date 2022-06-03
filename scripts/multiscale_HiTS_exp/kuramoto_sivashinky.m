@@ -3,10 +3,15 @@
 % Kuramoto-Sivashinsky equation (from Trefethen)
 % u_t = -u*u_x - u_xx - u_xxxx,  periodic BCs 
 
-N = 1024;
-x = 32*pi*(1:N)'/N;
+N = 512;
+x = 16*pi*(1:N)'/N;
 u = cos(x/16).*(sin(x/16)); 
 v = fft(u);
+
+fprintf('size(x) is %s\n', mat2str(size(x)))
+%fprintf('size(tt) is %s\n', mat2str(size(tt)))
+fprintf('size(u) is %s\n', mat2str(size(u)))
+
 
 % % % % % %
 %Spatial grid and initial condition:
@@ -24,19 +29,26 @@ f3 = h*real(mean( (-4-3*LR-LR.^2+exp(LR).*(4-LR))./LR.^3 ,2));
 
 % Main time-stepping loop:
 uu = u; tt = 0;
-tmax = 100; nmax = round(tmax/h); nplt = floor((tmax/250)/h); g = -0.5i*k;
+npoints = 4001;
+tmax = 1600; 
+nmax = round(tmax/h)
+nplt = 16;%floor((tmax/250)/h)
+g = -0.5i*k;
+
 for n = 1:nmax
-t = n*h;
-Nv = g.*fft(real(ifft(v)).^2);
-a = E2.*v + Q.*Nv;
-Na = g.*fft(real(ifft(a)).^2);
-b = E2.*v + Q.*Na;
-Nb = g.*fft(real(ifft(b)).^2);
-c = E2.*a + Q.*(2*Nb-Nv);
-Nc = g.*fft(real(ifft(c)).^2);
-v = E.*v + Nv.*f1 + 2*(Na+Nb).*f2 + Nc.*f3; if mod(n,nplt)==0
+    t = n*h;
+    Nv = g.*fft(real(ifft(v)).^2);
+    a = E2.*v + Q.*Nv;
+    Na = g.*fft(real(ifft(a)).^2);
+    b = E2.*v + Q.*Na;
+    Nb = g.*fft(real(ifft(b)).^2);
+    c = E2.*a + Q.*(2*Nb-Nv);
+    Nc = g.*fft(real(ifft(c)).^2);
+    v = E.*v + Nv.*f1 + 2*(Na+Nb).*f2 + Nc.*f3; 
+    if mod(n,nplt)==0
         u = real(ifft(v));
-uu = [uu,u]; tt = [tt,t]; end
+        uu = [uu,u]; tt = [tt,t]; 
+    end
 end
 % Plot results:
 surf(tt,x,uu), shading interp, colormap(hot), axis tight 
@@ -46,7 +58,14 @@ zlabel('uu')
 % view([-90 90]), colormap(autumn); 
 % set(gca,'zlim',[-5 50]) 
 
-save('kuramoto_sivishinky2.mat','x','tt','uu')
+fprintf('size(x) is %s\n', mat2str(size(x)))
+fprintf('size(tt) is %s\n', mat2str(size(tt)))
+fprintf('size(u) is %s\n', mat2str(size(uu)))
+
+uu = uu + normrnd(0,0.6 ,size(uu));
+
+
+save('kuramoto_sivishinky_new_noise_0.6.mat','x','tt','uu')
 
 %%
 figure(2), pcolor(x,tt,uu.'),shading interp, colormap(hot),axis off
