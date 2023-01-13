@@ -23,7 +23,7 @@ import Resnet_multiscale_general as net
 # k = 5                       # model index: should be in {0, 2, ..., 10}
 system = 'VanDerPol'         # system name: 'Hyperbolic', 'Cubic', 'VanDerPol', 'Hopf' or 'Lorenz'
 
-n_poss = 25#1000
+n_poss = 1000
 if system == 'Lorenz':
     dt = 0.0005
 else:
@@ -45,7 +45,7 @@ for noise in [0.0]:#, 0.01, 0.02, 0.05, 0.1, 0.2]:
     data_dir = os.path.join('../../data/', system,)
     model_dir = os.path.join('../../models/', system,) #'../../models/'  VanDerPol'
 #     model_dir = '../../models/VanDerPol_multiscale'
-#     model_dir = '../../models/VanDerPol_'+str(n_poss)
+    model_dir = '../../models/VanDerPol_'+str(n_poss)
 
 
     # load data
@@ -78,7 +78,7 @@ for noise in [0.0]:#, 0.01, 0.02, 0.05, 0.1, 0.2]:
                 step_sizes = [smallest_step, smallest_step*2, smallest_step*4]
                 # create/load model object
                 print('create model {} ...'.format(model_name))
-                model = net.ResNet(arch=arch, dt=dt, step_sizes=step_sizes)#, prev_models=prev_models)
+                model = net.ResNet(arch=arch, dt=dt, step_sizes=step_sizes, n_poss=n_poss)#, prev_models=prev_models)
             
 
 #             train large first, then all together (just training a little so it doesn't take ages

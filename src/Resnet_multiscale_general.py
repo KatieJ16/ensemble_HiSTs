@@ -38,7 +38,7 @@ class NNBlock(torch.nn.Module):
 
 
 class ResNet(torch.nn.Module):
-    def __init__(self, arch, dt, step_sizes, activation=torch.nn.ReLU()):
+    def __init__(self, arch, dt, step_sizes, activation=torch.nn.ReLU(), n_poss = 25):
         """
         :param arch: a list that provides the architecture
         :param dt: time step unit
@@ -53,6 +53,7 @@ class ResNet(torch.nn.Module):
 
         # param
         self.n_dim = arch[0]
+        self.n_poss = n_poss
 
         # data
         self.dt = dt
@@ -60,6 +61,9 @@ class ResNet(torch.nn.Module):
 
         # device
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
+        
+        self.train_errors = list()
+        self.val_errors = list()
 
         # layer
         self.activation = activation
@@ -67,7 +71,7 @@ class ResNet(torch.nn.Module):
             self.add_module(str(step_size), NNBlock(arch, activation=activation))
             
         try: #first try to load file
-            self.all_combos = np.load('all_combos_'+str(min(step_sizes))+'.npy', allow_pickle=True)
+            self.all_combos = np.load('all_combos_'+str(min(step_sizes))+'.npy', allow_pickle=True).flatten()
 
             print("Things about all combos:")
             print("len all_combos = ", len(self.all_combos))
@@ -75,23 +79,30 @@ class ResNet(torch.nn.Module):
             print("last 10 = ", self.all_combos[-10:])
             
         except: #or make it
-            print("Couldn't Load")
-            sys.exit(1)
-            self.all_combos = self.make_all_combos()
+            print("Couldn't Load combos, making")
+#             sys.exit(1)
+            self.all_combos = self.make_all_combos(file_name='all_combos_'+str(min(step_sizes))+'.npy')
+            #save to use next time. 
+            print("saving for later")
+            print('all_combos_'+str(min(step_sizes))+'.npy')
+            np.save('all_combos_'+str(min(step_sizes))+'.npy', self.all_combos, allow_pickle=True)
             
         self.best_loss = 1e+5
         
 #         self.count_times_picked = torch.zeros(1317)
         
-    def make_all_combos(self, max_repeat=4, target_list=None):
+    def make_all_combos(self, max_repeat=4, target_list=None, file_name=None):
         '''
             Makes a list of all possible combinations to test
         '''
         
         if target_list is None:
             target_list = np.arange(np.min(self.step_sizes)*2, np.max(self.step_sizes) * max_repeat, np.min(self.step_sizes))
+            
+        print("target_list = ", target_list)
         all_combos = list()
         for target in target_list:
+            
             print("!=================================================================")
             print("target = ", target)
 
@@ -106,7 +117,7 @@ class ResNet(torch.nn.Module):
             #filter out things that have 5 of the same number
             idx_keep = list()
             for i, value in enumerate(result):
-                if np.count_nonzero(np.array(value) == 1) < max_repeat:
+                if (np.count_nonzero(np.array(value) == self.step_sizes[0]) < max_repeat):
                     idx_keep.append(i)
 
             result_less = result[idx_keep]
@@ -115,8 +126,12 @@ class ResNet(torch.nn.Module):
             for this_poss in result_less:
                 for i in list(itertools.permutations(this_poss)):
                     if i not in all_combos:
-                        all_combos.append(i)
+                        try:
+                            all_combos.append(i)
+                        except:
+                            np.append(all_combos, i)
             print("len all_combos = ", len(all_combos))
+            
             
         return all_combos
 
@@ -179,6 +194,7 @@ class ResNet(torch.nn.Module):
         :param model_path: path to save the model
         :return: None
         """
+        
         # check consistency
         self.check_data_info(dataset)
 
@@ -195,11 +211,8 @@ class ResNet(torch.nn.Module):
             batch_ys = dataset.train_ys[new_idxs[:batch_size], :, :]
             # =============== calculate losses ================
             train_loss = self.calculate_loss(batch_x, batch_ys, w=w)
-            val_loss = self.calculate_loss(dataset.val_x, dataset.val_ys, w=w)
-            # ================ early stopping =================
-            if self.best_loss <= 1e-8:
-                print('--> model has reached an accuracy of 1e-8! Finished training!')
-                break
+#             val_loss = self.calculate_loss(dataset.val_x, dataset.val_ys, w=w, limit=False)
+            
             # =================== backward ====================
             optimizer.zero_grad()
             train_loss.backward()
@@ -211,23 +224,33 @@ class ResNet(torch.nn.Module):
                 print("time for first 10 = ", end_time - start_time)
             
             if epoch % print_every == 0:
+                val_loss = self.calculate_loss(dataset.val_x, dataset.val_ys, w=w, limit=False)
                 print('epoch {}, training loss {}, validation loss {}'.format(epoch, train_loss.item(),
                                                                               val_loss.item()))
-            if val_loss.item() < self.best_loss:
-                self.best_loss = val_loss.item()
-                if model_path is not None:
-                    print('(--> new model saved @ epoch {})'.format(epoch))
-                    print('epoch {}, training loss {}, validation loss {}'.format(epoch, train_loss.item(),
-                                                                              val_loss.item()))
-                    print("model_path = ", model_path)
-                    torch.save(self, model_path)
+                self.train_errors.append(train_loss.item())
+                self.val_errors.append(val_loss.item())
+        
+                if val_loss.item() < self.best_loss:
+                    self.best_loss = val_loss.item()
+                    if model_path is not None:
+                        print('(--> new model saved @ epoch {})'.format(epoch))
+#                         print('epoch {}, training loss {}, validation loss {}'.format(epoch, train_loss.item(),
+#                                                                                   val_loss.item()))
+#                         print("model_path = ", model_path)
+                        torch.save(self, model_path)
+    
+            # ================ early stopping =================
+            if self.best_loss <= 1e-8:
+                print('--> model has reached an accuracy of 1e-8! Finished training!')
+                break
+
 
         # if to save at the end
         if val_loss.item() < self.best_loss and model_path is not None:
             print('--> new model saved @ epoch {}'.format(epoch))
             torch.save(self, model_path)
 
-    def calculate_loss(self, x, ys, w=1.0):
+    def calculate_loss(self, x, ys, w=1.0, limit=True):
         """
         :param x: x batch, array of size batch_size x n_dim
         :param ys: ys batch, array of size batch_size x n_steps x n_dim
@@ -242,12 +265,20 @@ class ResNet(torch.nn.Module):
                   
         possibilities = len(self.all_combos)
         
-        for i in random.sample(range(possibilities), 25):
+        if limit:
+            try:
+                points_this = random.sample(range(possibilities), self.n_poss)
+            except:
+                points_this = random.sample(range(possibilities), 25)
+        else:
+            points_this = range(possibilities)
+            
+        for i in points_this:
             y_next = self.forward(x, str(self.all_combos[i][0]))
             for j in range(1, len(self.all_combos[i])):
                 y_next = self.forward(y_next, str(self.all_combos[i][j]))
             #add the amount of loss
-            loss += criterion(y_next, ys[:,sum(self.all_combos[i])/min(self.step_sizes) - 1,:])
+            loss += criterion(y_next, ys[:,int(sum(self.all_combos[i])/min(self.step_sizes)) - 1,:])
                   
         return loss.mean()
         
