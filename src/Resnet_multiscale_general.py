@@ -38,7 +38,7 @@ class NNBlock(torch.nn.Module):
 
 
 class ResNet(torch.nn.Module):
-    def __init__(self, arch, dt, step_sizes, activation=torch.nn.ReLU(), n_poss = 25):
+    def __init__(self, arch, dt, step_sizes, activation=torch.nn.ReLU(), n_poss = 25, combos_file = None):
         """
         :param arch: a list that provides the architecture
         :param dt: time step unit
@@ -71,7 +71,9 @@ class ResNet(torch.nn.Module):
             self.add_module(str(step_size), NNBlock(arch, activation=activation))
             
         try: #first try to load file
-            self.all_combos = np.load('all_combos_'+str(min(step_sizes))+'.npy', allow_pickle=True).flatten()
+            if combos_file is None:
+                combos_file = 'all_combos_'+str(min(step_sizes))+'.npy'
+            self.all_combos = np.load(combos_file, allow_pickle=True).flatten()
 
             print("Things about all combos:")
             print("len all_combos = ", len(self.all_combos))
