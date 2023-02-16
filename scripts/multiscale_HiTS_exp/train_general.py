@@ -76,7 +76,8 @@ model_dir = os.path.join('../../models/', system)#, '{}_{}'.format(system, str(n
 
 
 # load data
-train_data = np.load(os.path.join(data_dir, 'train_long_noise{}.npy'.format(noise)))
+# train_data = np.load(os.path.join(data_dir, 'train_long_noise{}.npy'.format(noise)))
+train_data = np.load(os.path.join(data_dir, 'train_noise{}.npy'.format(noise)))
 try:
     val_data = np.load(os.path.join(data_dir, 'val_noise{}.npy'.format(noise)))
     test_data = np.load(os.path.join(data_dir, 'test_noise{}.npy'.format(noise)))

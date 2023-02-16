@@ -40,6 +40,7 @@ max_epoch = 100000            # the maximum training epoch
 batch_size = 320              # training batch size
 # arch = [2, 128, 128, 128, 2]  # architecture of the neural network
 
+backward = False
 if system == 'KS' or system == "KS_new":
 #     smallest_step = 1
     dt = 0.025
@@ -48,10 +49,19 @@ if system == 'KS' or system == "KS_new":
     else:
         arch = [512, 2048, 512]
         
+    train_data_file = 'train_long_noise{}.npy'.format(noise)
+        
 elif system == "VanDerPol":
 #     smallest_step = 4
     dt = 0.01
     arch = [2, 512, 512, 512, 2]
+    
+elif system == "VanDerPol_backward":
+    data_dir = '../../data/VanDerPol'
+#     smallest_step = 4
+    dt = 0.01
+    arch = [2, 512, 512, 512, 2]
+    backward = True
 elif system == "Lorenz":
 #     smallest_step = 16
     dt = 0.0005
@@ -62,7 +72,11 @@ else:
 
     
 # paths
-data_dir = os.path.join('../../data/', system)
+try:
+    print(data_dir)
+except:
+    data_dir = os.path.join('../../data/', system)
+    
 model_dir = os.path.join('../../models/', system)
 
 # global const
@@ -70,12 +84,17 @@ n_forward = 5
 # step_size = 2**k
 
 # load data
-train_data = np.load(os.path.join(data_dir, 'train_long_noise{}.npy'.format(noise)))
+try:
+    train_data = np.load(os.path.join(data_dir, train_data_file))
+except:
+    train_data = np.load(os.path.join(data_dir, 'train_noise{}.npy'.format(noise)))
+    
 try:
     val_data = np.load(os.path.join(data_dir, 'val_noise{}.npy'.format(noise)))
 except:
     print("no validation found, using training.")
     val_data = train_data
+    
 try:
     test_data = np.load(os.path.join(data_dir, 'test_noise{}.npy'.format(noise)))
 except:
@@ -85,11 +104,10 @@ n_train = train_data.shape[0]
 n_val = val_data.shape[0]
 n_test = test_data.shape[0]
     
-# for step_size in [1,2,4]:
     
 
 # create dataset object
-dataset = net.DataSet(train_data, val_data, test_data, dt, step_size, n_forward)
+dataset = net.DataSet(train_data, val_data, test_data, dt, step_size, n_forward, backward=backward)
 
 model_name = 'original_model_D{}_noise{}_{}.pt'.format(step_size, noise, letter)
 
