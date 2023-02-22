@@ -36,9 +36,16 @@ print("letter = ", args.letter)
 system = args.system
 letter = args.letter
 print("system = ", system)
+
+lr = 1e-3                     # learning rate
+max_epoch = 500000            # the maximum training epoch 
+batch_size = 320              # training batch size
+
+combos_file = None
+
 if system == 'KS' or system == "KS_new":
-    smallest_step = 4#1
-    step_sizes  = [4, 8, 216]
+    smallest_step = 6#1
+    step_sizes  = [6, 36, 216]
     dt = 0.025
     arch = [512, 2048, 512]
     combos_file = "all_combos_KS.npy"
@@ -47,6 +54,7 @@ elif system == "VanDerPol":
     dt = 0.01
     arch = [2, 512, 512, 512, 2]
 elif system == "Lorenz":
+    lr = 1e-4  
     smallest_step = 16
     dt = 0.0005
     arch = [3, 1024, 1024, 1024, 3]
@@ -62,9 +70,7 @@ n_poss = 1773
 noise = args.noise
 # for noise in [0.0]:#, 0.01, 0.02, 0.05, 0.1, 0.2]:
 
-lr = 1e-3                     # learning rate
-max_epoch = 500000            # the maximum training epoch 
-batch_size = 320              # training batch size
+
 # arch = [512, 2048, 512]  # architecture of the neural network, KS
 
 
@@ -99,7 +105,7 @@ print("test_data.shape = ", test_data.shape)
 
 #     for letter in ['a']:
     #make and train
-model_name = 'model_{}_depends{}_stepsize{}_noise{}_{}.pt'.format(system, n_poss, smallest_step, noise, letter)
+model_name = 'model_{}_depends_stepsize{}_noise{}_{}.pt'.format(system, smallest_step, noise, letter)
 
 #define step_sizes if not already done
 try:
@@ -127,7 +133,7 @@ except:
         print("step_size = ", i)
         n_forward = 5
         dataset = net.DataSet(train_data, val_data, test_data, dt, i, n_forward)
-        model.train_net_single(dataset, max_epoch=100, batch_size=batch_size, lr=lr,
+        model.train_net_single(dataset, max_epoch=1000, batch_size=batch_size, lr=lr,
                         model_path=os.path.join(model_dir, model_name), print_every=100, type=str(i))
     # training
 n_forward = int(np.max(step_sizes)*4/np.min(step_sizes)) + 1

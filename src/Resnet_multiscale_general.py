@@ -197,6 +197,8 @@ class ResNet(torch.nn.Module):
         :return: None
         """
         
+        print("len(all_combos) = ", len(self.all_combos))
+        
         # check consistency
         self.check_data_info(dataset)
 
@@ -210,8 +212,10 @@ class ResNet(torch.nn.Module):
             n_samples = dataset.n_train
             new_idxs = torch.randperm(n_samples)
             batch_x = dataset.train_x[new_idxs[:batch_size], :]
+#             print("dataset.train_ys shape = ", dataset.train_ys.shape)
             batch_ys = dataset.train_ys[new_idxs[:batch_size], :, :]
             # =============== calculate losses ================
+#             print("batch_ys.shape = ", batch_ys.shape)
             train_loss = self.calculate_loss(batch_x, batch_ys, w=w)
 #             val_loss = self.calculate_loss(dataset.val_x, dataset.val_ys, w=w, limit=False)
             
@@ -227,8 +231,8 @@ class ResNet(torch.nn.Module):
             
             if epoch % print_every == 0:
                 val_loss = self.calculate_loss(dataset.val_x, dataset.val_ys, w=w, limit=False)
-                print('epoch {}, training loss {}, validation loss {}'.format(epoch, train_loss.item(),
-                                                                              val_loss.item()))
+                print('epoch {}, training loss {}, validation loss {}, best_loss {}'.format(epoch, train_loss.item(),
+                                                                              val_loss.item(), self.best_loss))
                 self.train_errors.append(train_loss.item())
                 self.val_errors.append(val_loss.item())
         
@@ -259,6 +263,7 @@ class ResNet(torch.nn.Module):
         :return: overall loss
         """
         batch_size, n_steps, n_dim = ys.size()
+#         print("ys.size()=", ys.size())
 #         batch_size, n_dim = ys.size()
         assert n_dim == self.n_dim
     
@@ -267,22 +272,38 @@ class ResNet(torch.nn.Module):
                   
         possibilities = len(self.all_combos)
         
-        if limit:
-            try:
-                points_this = random.sample(range(possibilities), self.n_poss)
-            except:
-                points_this = random.sample(range(possibilities), 25)
-        else:
-            points_this = range(possibilities)
+
+        for i in range(possibilities):
+            j_list = list()
+            y_preds = list()
             
-        for i in points_this:
-            y_next = self.forward(x, str(self.all_combos[i][0]))
-            for j in range(1, len(self.all_combos[i])):
+            y_preds = torch.zeros((batch_size, len(self.all_combos[i]),n_dim))
+            y_next = x
+            step = 0
+#             step = self.all_combos[i][0]
+#             y_next = self.forward(x, str(self.all_combos[i][0]))
+#             y_preds[:,0] = y_next
+#             j_list.append(int(step/min(self.step_sizes)))
+            
+            for j in range(len(self.all_combos[i])):
+                step = step + self.all_combos[i][j]
                 y_next = self.forward(y_next, str(self.all_combos[i][j]))
+                
+                y_preds[:,j,:] = y_next
+                j_list.append(int(step/min(self.step_sizes)))
+                
             #add the amount of loss
-            loss += criterion(y_next, ys[:,int(sum(self.all_combos[i])/min(self.step_sizes)) - 1,:])
+#             print("y_preds= ", y_preds.shape)
+#             print("j_list = ", j_list)
+#             print("j_list.shape = ", len(j_list))
+#             print("ys[:,j_list,:] = ", ys[:,j_list,:].shape)
+            
+            loss += criterion(y_preds, ys[:,j_list,:]).mean()
+#             print("loss = ", loss.mean())
+            
+#             loss += criterion(y_next, ys[:,int(sum(self.all_combos[i])/min(self.step_sizes)) - 1,:])
                   
-        return loss.mean()
+        return loss
         
         
     def train_net_single(self, dataset, max_epoch, batch_size, w=1.0, lr=1e-3, model_path=None, print_every=1000, type='4'):
