@@ -29,13 +29,16 @@ f3 = h*real(mean( (-4-3*LR-LR.^2+exp(LR).*(4-LR))./LR.^3 ,2));
 
 % Main time-stepping loop:
 uu = u; tt = 0;
-% npoints = 2000 + 50 * 1000%4001;     
+% npoints = 2000 + 50 * 1000%4001; 
+npoints = 4001;%112000;
+tmax = npoints * h;
 tmax = 1600*2; 
 nmax = round(tmax/h)
 nplt = 16;%floor((tmax/250)/h)
 g = -0.5i*k;
 
 for n = 1:nmax
+    n
     t = n*h;
     Nv = g.*fft(real(ifft(v)).^2);
     a = E2.*v + Q.*Nv;
@@ -45,13 +48,13 @@ for n = 1:nmax
     c = E2.*a + Q.*(2*Nb-Nv);
     Nc = g.*fft(real(ifft(c)).^2);
     v = E.*v + Nv.*f1 + 2*(Na+Nb).*f2 + Nc.*f3; 
-    if mod(n,nplt)==0
+%     if mod(n,nplt)==0
         u = real(ifft(v));
         uu = [uu,u]; tt = [tt,t]; 
-    end
+%     end
 end
 
-% Plot results:
+% % Plot results:
 % surf(tt,x,uu), shading interp, colormap(hot), axis tight 
 % xlabel('tt')
 % ylabel('x')

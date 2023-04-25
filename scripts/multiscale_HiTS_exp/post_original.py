@@ -42,7 +42,7 @@ model_dir = os.path.join('../../models/', system)
 # global const
 # ks = [1]#list(range(11))
 # step_sizes = [2**k for k in ks]
-step_sizes = [4, 8, 16]#[4,  8, 216]
+#step_sizes = [4, 8, 16]#[4,  8, 216]
 
 if system == 'KS' or system == "KS_new":
     smallest_step = 4
@@ -59,6 +59,19 @@ elif system == "Lorenz":
     dt = 0.0005
     arch = [3, 1024, 1024, 1024, 3]
     step_sizes = [1, 2, 4, 8, 16, 32, 64]
+    
+elif system == "hyperbolic":
+    dt = 0.01
+    arch = [2, 128, 128, 128, 2] 
+    step_sizes = [8, 16, 32]#[1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024]
+elif "cubic" in system:
+    dt = 0.01
+    arch = [2, 256, 256, 256, 2] 
+    step_sizes = [8, 16, 32]#[2, 4, 8]# [1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024]
+elif "hopf" in system:
+    dt = 0.01
+    arch = [3, 128, 128, 128, 3]
+    step_sizes = [4, 8, 16]#[1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024]
 else:
     print("system not available")
     raise SystemExit()
@@ -82,14 +95,19 @@ for step_size in step_sizes:
     model_name = 'original_model_D{}_noise{}.pt'.format(step_size, noise, letter)
     print("load ", model_name)
     try:
-        models.append(torch.load(os.path.join(model_dir, model_name), map_location='cpu'))
-    except:
         try:
-            model_name = 'original_model_D{}_noise{}_{}.pt'.format(step_size, noise, letter)
             models.append(torch.load(os.path.join(model_dir, model_name), map_location='cpu'))
         except:
-            model_name = 'original_model_D{}_noise{}_{}.pt'.format(step_size, noise, 'b')
-            models.append(torch.load(os.path.join(model_dir, model_name), map_location='cpu'))
+            try:
+                model_name = 'original_model_D{}_noise{}_{}.pt'.format(step_size, noise, letter)
+                models.append(torch.load(os.path.join(model_dir, model_name), map_location='cpu'))
+            except:
+                model_name = 'original_model_D{}_noise{}_{}.pt'.format(step_size, noise, 'b')
+                models.append(torch.load(os.path.join(model_dir, model_name), map_location='cpu'))
+    except:
+        print("done loading at {}".format(step_size))
+        break
+        
 
 
 # fix model consistencies trained on gpus (optional)
@@ -117,7 +135,7 @@ for model in models:
     plt.plot(test_data[0, 1:501, ], label = "truth")
     plt.legend()
     plt.title(str(model.step_size))
-    plt.savefig("lorenz_single_{}.pdf".format(model.step_size))
+    plt.savefig("{}_single_{}.pdf".format(system, model.step_size))
     
     end = time.time()
     times.append(end - start)
@@ -169,7 +187,6 @@ plt.yticks(fontsize=60)
 # plt.ylim([0.001, 10])
 
 plt.savefig("{}_original_mse_n{}.pdf".format(system, noise))
-fghj
 
 import random
 all_combos = np.load('all_combos_'+str(1)+'.npy', allow_pickle=True)
@@ -266,122 +283,122 @@ for k in range(len(preds_mse)):
     mean = err.mean(0).detach().numpy()
     plt.semilogy(mean, label='$\Delta\ t$={}dt'.format(step_sizes[k]))
     
-plt.semilogy(multiscale_err, label = "multiscale")
+plt.semilogy(multiscale_err, 'k', label = "multiscale")
 
 ts, means = find_ave_random_paths(t_list_list, mse_list)
 plt.plot(ts, means[:,0],  label = "average")
 
 
 plt.legend()
-plt.title(system + ": MSE : noise = " + str(noise) + ": " + str(num_lines) + " random paths, original")
-plt.savefig("{}_MSE_n{}_all_original.pdf".format(system, noise))
+plt.title(system + ": MSE : noise = " + str(noise) + ": " + str(num_lines) + " random paths, original: step_sizes = "+ str(step_sizes))
+plt.savefig("{}_MSE_n{}_all_original_smallest{}.pdf".format(system, noise, min(step_sizes)))
 
 plt.figure()
 for i in range(len(y_pred_list)):
     plt.plot(t_list_list[i], y_pred_list[i], 'r')
 plt.plot(test_data[0,1:], 'b')
-plt.title(system + ": Predicted 1 path : noise = " + str(noise) +" original")
-plt.savefig("{}_predict_first_n{}_original.pdf".format(system, noise))
+plt.title(system + ": Predicted 1 path : noise = " + str(noise) +" original : step_sizes = "+ str(step_sizes))
+plt.savefig("{}_predict_first_n{}_original_smallest{}.pdf".format(system, noise, min(step_sizes)))
 
-plt.figure()
-for i in range(len(y_pred_list)):
-    plt.plot(t_list_list[i], y_pred_list[i], 'r')
-plt.plot(test_data[0,1:], 'b')
-plt.xlim([3000, test_data.shape[1]])
-plt.title(system + ": Predicted 1 path zoomed: noise = " + str(noise)+" original")
-plt.savefig("{}_predict_first_zoomed_n{}_original.pdf".format(system, noise))
+# plt.figure()
+# for i in range(len(y_pred_list)):
+#     plt.plot(t_list_list[i], y_pred_list[i], 'r')
+# plt.plot(test_data[0,1:], 'b')
+# plt.xlim([3000, test_data.shape[1]])
+# plt.title(system + ": Predicted 1 path zoomed: noise = " + str(noise)+" original")
+# plt.savefig("{}_predict_first_zoomed_n{}_original.pdf".format(system, noise))
 
-#===========================================================================================================
-#repeat with perfect data
+# #===========================================================================================================
+# #repeat with perfect data
 
 
-# uniscale time-stepping with NN
-preds_mse = list()
-times = list()
+# # uniscale time-stepping with NN
+# preds_mse = list()
+# times = list()
 
-for model in models:
-    start = time.time()
-    y_preds = model.uni_scale_forecast(torch.tensor(test_data[:, 0, :]).float(), n_steps=n_steps)
+# for model in models:
+#     start = time.time()
+#     y_preds = model.uni_scale_forecast(torch.tensor(test_data[:, 0, :]).float(), n_steps=n_steps)
     
-    end = time.time()
-    times.append(end - start)
-    preds_mse.append(criterion(torch.tensor(test_data[:, 1:, :]).float(), y_preds).mean(-1))
+#     end = time.time()
+#     times.append(end - start)
+#     preds_mse.append(criterion(torch.tensor(test_data[:, 1:, :]).float(), y_preds).mean(-1))
     
 
-# multiscale time-stepping with NN
-start = time.time()
-y_preds = net.vectorized_multi_scale_forecast(torch.tensor(test_data[:, 0, :]).float(), n_steps=n_steps, models=models)
-end = time.time()
-multiscale_time = end - start
-multiscale_preds_mse = criterion(torch.tensor(test_data[:, 1:, :]).float(), y_preds).mean(-1)
+# # multiscale time-stepping with NN
+# start = time.time()
+# y_preds = net.vectorized_multi_scale_forecast(torch.tensor(test_data[:, 0, :]).float(), n_steps=n_steps, models=models)
+# end = time.time()
+# multiscale_time = end - start
+# multiscale_preds_mse = criterion(torch.tensor(test_data[:, 1:, :]).float(), y_preds).mean(-1)
 
-# visualize forecasting error at each time step    
-fig = plt.figure(figsize=(30, 10))
-colors=iter(plt.cm.rainbow(np.linspace(0, 1, len(preds_mse))))
-multiscale_err = multiscale_preds_mse.mean(0).detach().numpy()
-for k in range(len(preds_mse)):
-    print(k)
-    err = preds_mse[k]
-    mean = err.mean(0).detach().numpy()
-    rgb = next(colors)
-    plt.semilogy(t, mean, linestyle='-', color=rgb, linewidth=5, label='$\Delta\ t$={}dt'.format(step_sizes[k]))
-plt.semilogy(t, multiscale_err, linestyle='-', color='k', linewidth=6, label='multiscale')
-plt.legend(fontsize=30, loc='upper center', ncol=6, bbox_to_anchor=(0.5, 1.2))
-plt.xticks(fontsize=60)
-plt.yticks(fontsize=60)
+# # visualize forecasting error at each time step    
+# fig = plt.figure(figsize=(30, 10))
+# colors=iter(plt.cm.rainbow(np.linspace(0, 1, len(preds_mse))))
+# multiscale_err = multiscale_preds_mse.mean(0).detach().numpy()
+# for k in range(len(preds_mse)):
+#     print(k)
+#     err = preds_mse[k]
+#     mean = err.mean(0).detach().numpy()
+#     rgb = next(colors)
+#     plt.semilogy(t, mean, linestyle='-', color=rgb, linewidth=5, label='$\Delta\ t$={}dt'.format(step_sizes[k]))
+# plt.semilogy(t, multiscale_err, linestyle='-', color='k', linewidth=6, label='multiscale')
+# plt.legend(fontsize=30, loc='upper center', ncol=6, bbox_to_anchor=(0.5, 1.2))
+# plt.xticks(fontsize=60)
+# plt.yticks(fontsize=60)
 
-# plt.ylim([0.001, 10])
+# # plt.ylim([0.001, 10])
 
-plt.savefig("{}_original_mse_n{}_perfect.pdf".format(system, noise))
+# plt.savefig("{}_original_mse_n{}_perfect.pdf".format(system, noise))
 
 
-num_lines = 500
-mse_list = list()
-t_list_list = list()
-path_list = list()
-y_pred_list = list()
+# num_lines = 500
+# mse_list = list()
+# t_list_list = list()
+# path_list = list()
+# y_pred_list = list()
 
-for i in range(num_lines):
-    y_preds_random, mse_random, t_list_random = predict_random_combo(models, to_plot = False,  timesteps = 5000)
-    y_pred_list.append(y_preds_random[0,:])
-    mse_list.append(mse_random)
-    t_list_list.append(t_list_random)
+# for i in range(num_lines):
+#     y_preds_random, mse_random, t_list_random = predict_random_combo(models, to_plot = False,  timesteps = 5000)
+#     y_pred_list.append(y_preds_random[0,:])
+#     mse_list.append(mse_random)
+#     t_list_list.append(t_list_random)
     
     
-plt.figure()
-for i in range(len(mse_list)):
-    plt.semilogy(t_list_list[i], mse_list[i], 'r', linewidth = 0.5)#, label = path_list[i])
+# plt.figure()
+# for i in range(len(mse_list)):
+#     plt.semilogy(t_list_list[i], mse_list[i], 'r', linewidth = 0.5)#, label = path_list[i])
 
-plt.semilogy(t_list_list[i], mse_list[i], 'r', linewidth = 0.5, label="random")
+# plt.semilogy(t_list_list[i], mse_list[i], 'r', linewidth = 0.5, label="random")
 
 
-for k in range(len(preds_mse)):
-    print(k)
-    err = preds_mse[k]
-    mean = err.mean(0).detach().numpy()
-    plt.semilogy(mean, label='$\Delta\ t$={}dt'.format(step_sizes[k]))
+# for k in range(len(preds_mse)):
+#     print(k)
+#     err = preds_mse[k]
+#     mean = err.mean(0).detach().numpy()
+#     plt.semilogy(mean, label='$\Delta\ t$={}dt'.format(step_sizes[k]))
     
-plt.semilogy(multiscale_err, label = "multiscale")
+# plt.semilogy(multiscale_err, 'k', label = "multiscale")
 
-ts, means = find_ave_random_paths(t_list_list, mse_list)
-plt.plot(ts, means[:,0],  label = "average")
+# ts, means = find_ave_random_paths(t_list_list, mse_list)
+# plt.plot(ts, means[:,0],  label = "average")
 
 
-plt.legend()
-plt.title(system + ": MSE : noise = " + str(noise) + ": " + str(num_lines) + " random paths, original perfect")
-plt.savefig("{}_MSE_n{}_all_original_perfect.pdf".format(system, noise))
+# plt.legend()
+# plt.title(system + ": MSE : noise = " + str(noise) + ": " + str(num_lines) + " random paths, original perfect")
+# plt.savefig("{}_MSE_n{}_all_original_perfect.pdf".format(system, noise))
 
-plt.figure()
-for i in range(len(y_pred_list)):
-    plt.plot(t_list_list[i], y_pred_list[i], 'r')
-plt.plot(test_data[0,1:], 'b')
-plt.title(system + ": Predicted 1 path : noise = " + str(noise) +" original perfect")
-plt.savefig("{}_predict_first_n{}_original_perfect.pdf".format(system, noise))
+# plt.figure()
+# for i in range(len(y_pred_list)):
+#     plt.plot(t_list_list[i], y_pred_list[i], 'r')
+# plt.plot(test_data[0,1:], 'b')
+# plt.title(system + ": Predicted 1 path : noise = " + str(noise) +" original perfect")
+# plt.savefig("{}_predict_first_n{}_original_perfect.pdf".format(system, noise))
 
-plt.figure()
-for i in range(len(y_pred_list)):
-    plt.plot(t_list_list[i], y_pred_list[i], 'r')
-plt.plot(test_data[0,1:], 'b')
-plt.xlim([3000, test_data.shape[1]])
-plt.title(system + ": Predicted 1 path zoomed: noise = " + str(noise)+" original perfect")
-plt.savefig("{}_predict_first_zoomed_n{}_original_perfect.pdf".format(system, noise))
+# plt.figure()
+# for i in range(len(y_pred_list)):
+#     plt.plot(t_list_list[i], y_pred_list[i], 'r')
+# plt.plot(test_data[0,1:], 'b')
+# plt.xlim([3000, test_data.shape[1]])
+# plt.title(system + ": Predicted 1 path zoomed: noise = " + str(noise)+" original perfect")
+# plt.savefig("{}_predict_first_zoomed_n{}_original_perfect.pdf".format(system, noise))

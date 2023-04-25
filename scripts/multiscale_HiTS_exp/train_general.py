@@ -25,6 +25,7 @@ parser = argparse.ArgumentParser(description="""Add description.""")
 parser.add_argument("-n", "--noise", help="level of noise", type=float)
 parser.add_argument("-s", "--system", help="system type: VanDerPol, Lorenz, KS")
 parser.add_argument("-l", "--letter", default='a')
+parser.add_argument("-ss", "--small", default=0, type=int)
 # parser.add_argument("password", help="Password")
 # parser.add_argument("email", help="Email")
 # parser.add_argument("--gender", help="Gender")
@@ -32,6 +33,7 @@ args = parser.parse_args()
 print("noise = ", args.noise)
 print("system = ", args.system)
 print("letter = ", args.letter)
+print("small = ", args.small)
 
 system = args.system
 letter = args.letter
@@ -43,35 +45,8 @@ batch_size = 320              # training batch size
 
 combos_file = None
 
-if system == 'KS' or system == "KS_new":
-    smallest_step = 6#1
-    step_sizes  = [6, 36, 216]
-    dt = 0.025
-    arch = [512, 2048, 512]
-    combos_file = "all_combos_KS.npy"
-elif system == "VanDerPol":
-    smallest_step = 4
-    dt = 0.01
-    arch = [2, 512, 512, 512, 2]
-elif system == "Lorenz":
-    lr = 1e-4  
-    smallest_step = 16
-    dt = 0.0005
-    arch = [3, 1024, 1024, 1024, 3]
-else:
-    print("system not available")
-    raise SystemExit()
-    
-n_poss = 1773
-    
-# smallest_step = 1#64
-# dt = 0.0250
 
 noise = args.noise
-# for noise in [0.0]:#, 0.01, 0.02, 0.05, 0.1, 0.2]:
-
-
-# arch = [512, 2048, 512]  # architecture of the neural network, KS
 
 
 # paths
@@ -92,7 +67,7 @@ except:
     val_data= train_data
     test_data=train_data
     
-n_train = train_data.shape[0]
+n_train, _, ndim = train_data.shape
 n_val = val_data.shape[0]
 n_test = test_data.shape[0]
 
@@ -101,18 +76,59 @@ print("val_data shape = ", val_data.shape)
 print("test_data.shape = ", test_data.shape)
 
 
+if 'KS' in system:
+    smallest_step = 6#1
+    step_sizes  = [6, 36, 216]
+    dt = 0.025
+    arch = [ndim, 2048, ndim]
+#     combos_file = "all_combos_KS.npy"
+elif system == "VanDerPol":
+    smallest_step = 4
+    dt = 0.01
+    arch = [2, 512, 512, 512, 2]
+elif system == "Lorenz":
+    lr = 1e-4  
+    smallest_step = 16
+    dt = 0.0005
+    arch = [3, 1024, 1024, 1024, 3]
+elif "hyperbolic" in system:
+    lr = 1e-4  
+    smallest_step = 8
+    dt = 0.01
+    arch = [2, 128, 128, 128, 2] 
+elif "cubic" in system:
+    lr = 1e-4  
+    smallest_step = 2
+    dt = 0.01
+    arch = [2, 256, 256, 256, 2] 
+elif "hopf" in system:
+    lr = 1e-4  
+    smallest_step = 4
+    dt = 0.01
+    arch = [3, 128, 128, 128, 3]
+else:
+    print("system not available")
+    raise SystemExit()
+    
+if args.small > 0:
+    smallest_step = args.small
+    step_sizes = [smallest_step, smallest_step*2, smallest_step*4]
+    print("step_sizes= ", step_sizes)
+    
+    
+print("step_sizes = ", step_sizes)
+print("smallest_step = ", smallest_step)
+
+n_poss = 1773
+
+
 # for step_size in [smallest_step]:#,8,16,32]:
 
 #     for letter in ['a']:
     #make and train
 model_name = 'model_{}_depends_stepsize{}_noise{}_{}.pt'.format(system, smallest_step, noise, letter)
 
-#define step_sizes if not already done
-try:
-    print("step_sizes= ", step_sizes)
-except:
-    step_sizes = [smallest_step, smallest_step*2, smallest_step*4]
-    print("step_sizes= ", step_sizes)
+
 
 # # create/load model object
 try:

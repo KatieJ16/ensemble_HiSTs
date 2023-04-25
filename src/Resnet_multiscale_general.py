@@ -93,49 +93,49 @@ class ResNet(torch.nn.Module):
         
 #         self.count_times_picked = torch.zeros(1317)
         
-    def make_all_combos(self, max_repeat=4, target_list=None, file_name=None):
-        '''
-            Makes a list of all possible combinations to test
-        '''
+#     def make_all_combos(self, max_repeat=4, target_list=None, file_name=None):
+#         '''
+#             Makes a list of all possible combinations to test
+#         '''
         
-        if target_list is None:
-            target_list = np.arange(np.min(self.step_sizes)*2, np.max(self.step_sizes) * max_repeat, np.min(self.step_sizes))
+#         if target_list is None:
+#             target_list = np.arange(np.min(self.step_sizes)*2, np.max(self.step_sizes) * max_repeat, np.min(self.step_sizes))
             
-        print("target_list = ", target_list)
-        all_combos = list()
-        for target in target_list:
+#         print("target_list = ", target_list)
+#         all_combos = list()
+#         for target in target_list:
             
-            print("!=================================================================")
-            print("target = ", target)
+#             print("!=================================================================")
+#             print("target = ", target)
 
-            #get all combinations of the step_sizes that sum to target
-            #https://stackoverflow.com/questions/34517540/find-all-combinations-of-a-list-of-numbers-with-a-given-sum
-            result = [seq for i in range(target, 0, -1)
-                      for seq in itertools.combinations_with_replacement(self.step_sizes, i)
-                      if sum(seq) == target]
+#             #get all combinations of the step_sizes that sum to target
+#             #https://stackoverflow.com/questions/34517540/find-all-combinations-of-a-list-of-numbers-with-a-given-sum
+#             result = [seq for i in range(target, 0, -1)
+#                       for seq in itertools.combinations_with_replacement(self.step_sizes, i)
+#                       if sum(seq) == target]
             
-            result = np.array(result)
+#             result = np.array(result)
 
-            #filter out things that have 5 of the same number
-            idx_keep = list()
-            for i, value in enumerate(result):
-                if (np.count_nonzero(np.array(value) == self.step_sizes[0]) < max_repeat):
-                    idx_keep.append(i)
+#             #filter out things that have 5 of the same number
+#             idx_keep = list()
+#             for i, value in enumerate(result):
+#                 if (np.count_nonzero(np.array(value) == self.step_sizes[0]) < max_repeat):
+#                     idx_keep.append(i)
 
-            result_less = result[idx_keep]
+#             result_less = result[idx_keep]
 
-            # Find all permutations
-            for this_poss in result_less:
-                for i in list(itertools.permutations(this_poss)):
-                    if i not in all_combos:
-                        try:
-                            all_combos.append(i)
-                        except:
-                            np.append(all_combos, i)
-            print("len all_combos = ", len(all_combos))
+#             # Find all permutations
+#             for this_poss in result_less:
+#                 for i in list(itertools.permutations(this_poss)):
+#                     if i not in all_combos:
+#                         try:
+#                             all_combos.append(i)
+#                         except:
+#                             np.append(all_combos, i)
+#             print("len all_combos = ", len(all_combos))
             
             
-        return all_combos
+#         return all_combos
 
     def check_data_info(self, dataset):
         """

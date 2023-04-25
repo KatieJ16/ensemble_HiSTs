@@ -28,6 +28,6 @@ echo "noise = $1"
 echo "system = $2"
 echo "letter = $3"
 
-echo "srun python -u train_general.py -n $1 -s $2 -l $3"
+echo "srun python -u train_general.py -n $1 -s $2 -l $3 --small $4"
 
-srun python -u train_general.py -n $1 -s $2 -l $3
+srun python -u train_general.py -n $1 -s $2 -l $3 --small $4
