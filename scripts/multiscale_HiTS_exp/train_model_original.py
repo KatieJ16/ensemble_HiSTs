@@ -52,7 +52,7 @@ except:
 model_dir = os.path.join('../../models/', system)
 
 # global const
-n_forward = 5
+n_forward = 4
 # step_size = 2**k
 
 # load data
@@ -60,6 +60,8 @@ try:
     train_data = np.load(os.path.join(data_dir, train_data_file))
 except:
     train_data = np.load(os.path.join(data_dir, 'train_noise{}.npy'.format(noise)))
+    
+print("train_data.shape = ", train_data.shape)
     
 try:
     val_data = np.load(os.path.join(data_dir, 'val_noise{}.npy'.format(noise)))
