@@ -93,7 +93,7 @@ make_all_combos(step_sizes, target_list=target_list, file_name_base=file_name_ba
 all_combos = list()
 for target in target_list:
     file_name = file_name_base+'_'+str(target)+'.npy'
-    print("np.load(file_name, allow_pickle=True)
+    print("np.load(file_name, allow_pickle=True)")
     all_combos = all_combos + np.load(file_name, allow_pickle=True)
     print("len(all_combos) = ", len(all_combos))
 

@@ -33,7 +33,7 @@ class DataSet:
 
         # data
         x_idx = 0
-        y_start_idx = x_idx + step_size
+        y_start_idx = x_idx #+ step_size
         y_end_idx = x_idx + step_size*n_forward + 1
         self.train_x = torch.tensor(train_data[:, x_idx, :]).float().to(self.device)
         self.train_ys = torch.tensor(train_data[:, y_start_idx:y_end_idx:step_size, :]).float().to(self.device)

@@ -82,11 +82,11 @@ if 'KS' in system:
     dt = 0.025
     arch = [ndim, 2048, ndim]
 #     combos_file = "all_combos_KS.npy"
-elif system == "VanDerPol":
+elif "VanDerPol" in system:
     smallest_step = 4
     dt = 0.01
     arch = [2, 512, 512, 512, 2]
-elif system == "Lorenz":
+elif "Lorenz" in system:
     lr = 1e-4  
     smallest_step = 16
     dt = 0.0005

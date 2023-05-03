@@ -256,6 +256,56 @@ class ResNet(torch.nn.Module):
             print('--> new model saved @ epoch {}'.format(epoch))
             torch.save(self, model_path)
 
+#     def calculate_loss(self, x, ys, w=1.0, limit=True):
+#         """
+#         :param x: x batch, array of size batch_size x n_dim
+#         :param ys: ys batch, array of size batch_size x n_steps x n_dim
+#         :return: overall loss
+#         """
+#         batch_size, n_steps, n_dim = ys.size()
+# #         print("ys.size()=", ys.size())
+# #         batch_size, n_dim = ys.size()
+#         assert n_dim == self.n_dim
+    
+#         criterion = torch.nn.MSELoss(reduction='none')
+#         loss = 0.0
+                  
+#         possibilities = len(self.all_combos)
+        
+
+#         for i in range(possibilities):
+#             j_list = list()
+#             y_preds = list()
+            
+#             y_preds = torch.zeros((batch_size, len(self.all_combos[i]),n_dim))
+#             y_next = x
+#             step = 0
+# #             step = self.all_combos[i][0]
+# #             y_next = self.forward(x, str(self.all_combos[i][0]))
+# #             y_preds[:,0] = y_next
+# #             j_list.append(int(step/min(self.step_sizes)))
+            
+#             for j in range(len(self.all_combos[i])):
+#                 step = step + self.all_combos[i][j]
+#                 y_next = self.forward(y_next, str(self.all_combos[i][j]))
+                
+#                 y_preds[:,j,:] = y_next
+#                 j_list.append(int(step/min(self.step_sizes)))
+                
+#             #add the amount of loss
+# #             print("y_preds= ", y_preds.shape)
+# #             print("j_list = ", j_list)
+# #             print("j_list.shape = ", len(j_list))
+# #             print("ys[:,j_list,:] = ", ys[:,j_list,:].shape)
+            
+#             loss += criterion(y_preds, ys[:,j_list,:]).mean()
+# #             print("loss = ", loss.mean())
+            
+# #             loss += criterion(y_next, ys[:,int(sum(self.all_combos[i])/min(self.step_sizes)) - 1,:])
+                  
+#         return loss
+
+
     def calculate_loss(self, x, ys, w=1.0, limit=True):
         """
         :param x: x batch, array of size batch_size x n_dim
@@ -263,47 +313,54 @@ class ResNet(torch.nn.Module):
         :return: overall loss
         """
         batch_size, n_steps, n_dim = ys.size()
-#         print("ys.size()=", ys.size())
 #         batch_size, n_dim = ys.size()
         assert n_dim == self.n_dim
     
         criterion = torch.nn.MSELoss(reduction='none')
         loss = 0.0
                   
-        possibilities = len(self.all_combos)
+#         possibilities = len(self.all_combos)
         
-
-        for i in range(possibilities):
-            j_list = list()
-            y_preds = list()
+#         if limit:
+#             try:
+#                 points_this = random.sample(range(possibilities), self.n_poss)
+#             except:
+#                 points_this = random.sample(range(possibilities), 25)
+#         else:
+#             points_this = range(possibilities)
             
-            y_preds = torch.zeros((batch_size, len(self.all_combos[i]),n_dim))
-            y_next = x
-            step = 0
-#             step = self.all_combos[i][0]
-#             y_next = self.forward(x, str(self.all_combos[i][0]))
-#             y_preds[:,0] = y_next
-#             j_list.append(int(step/min(self.step_sizes)))
+        
+        for i in range(len(self.all_combos)):
+            t_list = list()
+            y_next = self.forward(x, str(self.all_combos[i][0]))
+            y_preds = torch.zeros(batch_size, len(self.all_combos[i]), n_dim).float().to(self.device)
+            y_preds[:,0] = y_next
             
-            for j in range(len(self.all_combos[i])):
-                step = step + self.all_combos[i][j]
+            t = int(self.all_combos[i][0]/min(self.step_sizes))
+            t_list.append(t)
+#             print("len(self.all_combos[i])= ", self.all_combos[i])
+            for j in range(1, len(self.all_combos[i])):
                 y_next = self.forward(y_next, str(self.all_combos[i][j]))
-                
-                y_preds[:,j,:] = y_next
-                j_list.append(int(step/min(self.step_sizes)))
-                
+                y_preds[:,j] = y_next
+                t += int(self.all_combos[i][j]/min(self.step_sizes))
+                t_list.append(t)
+#                 t_list.append(int(self.all_combos[i][j]/min(self.step_sizes)))
             #add the amount of loss
-#             print("y_preds= ", y_preds.shape)
-#             print("j_list = ", j_list)
-#             print("j_list.shape = ", len(j_list))
-#             print("ys[:,j_list,:] = ", ys[:,j_list,:].shape)
+#             print("self.all_combos[i] = ", self.all_combos[i])
+#             print("t_list = ", t_list)
+#             print("y_preds shape =", y_preds.shape)
+#             print("ys[:,t_list,:] shape = ", ys[:,t_list,:].shape)
+#             print("loss = ", criterion(y_preds, ys[:,t_list,:]))
+#             loss += criterion(y_preds, ys[:,self.all_combos[i]/min(self.step_sizes),:])
+#             try:
+#                 print("loss shape = ", criterion(y_preds, ys[:,t_list,:]).mean().shape)
+            loss += criterion(y_preds, ys[:,t_list,:]).mean()
             
-            loss += criterion(y_preds, ys[:,j_list,:]).mean()
-#             print("loss = ", loss.mean())
-            
+
 #             loss += criterion(y_next, ys[:,int(sum(self.all_combos[i])/min(self.step_sizes)) - 1,:])
                   
-        return loss
+    
+        return loss.mean()
         
         
     def train_net_single(self, dataset, max_epoch, batch_size, w=1.0, lr=1e-3, model_path=None, print_every=1000, type='4'):

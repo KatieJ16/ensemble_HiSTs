@@ -413,7 +413,7 @@ y_preds = vectorized_multi_scale_forecast(torch.tensor(test_data[:, 0, :]).float
 all_combos = np.load('all_combos_'+str(smallest_step)+'.npy', allow_pickle=True)
 
 
-num_lines = 500
+num_lines = 100
 mse_list = list()
 t_list_list = list()
 path_list = list()

@@ -90,7 +90,7 @@ if 'KS' in system:
         
     train_data_file = 'train_long_noise{}.npy'.format(noise)
         
-elif system == "VanDerPol":
+elif "VanDerPol" in system:
 #     smallest_step = 4
     dt = 0.01
     arch = [2, 512, 512, 512, 2]
@@ -101,7 +101,7 @@ elif system == "VanDerPol_backward":
     dt = 0.01
     arch = [2, 512, 512, 512, 2]
     backward = True
-elif system == "Lorenz":
+elif "Lorenz" in system:
 #     smallest_step = 16
     dt = 0.0005
     arch = [3, 1024, 1024, 1024, 3]
