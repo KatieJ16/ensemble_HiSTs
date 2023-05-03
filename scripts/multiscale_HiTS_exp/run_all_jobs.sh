@@ -1,0 +1,21 @@
+#!/bin/bash
+
+#inputs need to be noise system letter smallest_step
+
+system=$1
+letter=$2
+smallest_step=$3
+
+for noise in 0.0 0.05 0.1 0.2
+do
+   echo sbatch train_general.slurm $noise $system $letter $smallest_step
+
+    #run the depends method
+    sbatch train_general.slurm $noise $system $letter $smallest_step
+
+    #run original versions
+    sbatch train_model_original.slurm $smallest_step $noise $system $letter 
+    sbatch train_model_original.slurm $((smallest_step*2)) $noise $system $letter 
+    sbatch train_model_original.slurm $((smallest_step*2)) $noise $system $letter 
+
+done
