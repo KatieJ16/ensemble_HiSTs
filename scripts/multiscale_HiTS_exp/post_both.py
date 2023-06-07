@@ -248,6 +248,7 @@ def predict_random_combo_not_repeat(model_depends, models_original, test_data, t
     y_pred_list_depends = list()
     y_pred_list_original = list()
 
+    step_sizes = [36]
     indices = np.random.randint(0,len(step_sizes), int(timesteps/min(step_sizes)))
     steps = list()
     for i in range(len(indices)):
@@ -282,14 +283,28 @@ def predict_random_combo_not_repeat(model_depends, models_original, test_data, t
     return y_pred_list_depends, y_pred_list_original, mse_depends, mse_original, t_list
 #===========================================================================================================
 
+spacial = False
 
+override_step_list = True
 step_sizes = [4, 8, 216]#[4, 8, 216]
 # timesteps = 5000
 if 'KS' in system:#or system == "KS_new":
     smallest_step = 4
+    override_step_list = False
     dt = 0.025
     arch = [512, 2048, 512]
-    step_sizes = [4, 8, 216]
+    step_sizes = [1, 6, 36]#[4, 8, 216]
+    spacial = True
+    
+elif 'fluid' in system:#or system == "KS_new":
+    n_forward = 3
+    override_step_list = False
+#     smallest_step = 6#1
+    dt = 0.01
+    arch = [22, 256, 22]
+    step_sizes  = [1, 4, 16]
+    combos_file = "all_combos_fluid4.npy"
+    
 elif  "VanDerPol" in system:
     smallest_step = 4
     dt = 0.01
@@ -326,7 +341,8 @@ else:
 
 if args.small > 0:
     smallest_step = args.small
-    step_sizes = [smallest_step, smallest_step*2, smallest_step*4]
+    if override_step_list:
+        step_sizes = [smallest_step, smallest_step*2, smallest_step*4]
     
 n_poss = 1773
 
@@ -408,9 +424,18 @@ timesteps = test_data.shape[1] - 1
 if "Lorenz" in system:
     timesteps = 1000
     
+elif "KS" in system:
+    timesteps = 1000
+    
 print("timesteps = ", timesteps)
 
-num_lines = 500
+
+#get predicted of just 36step on KS_again
+if 'KS_again' in system:
+    y_preds_36_depends, _, t_list_36_depends = predict_single_scale(model_depends, 36, test_data, timesteps = 1000, size='36', to_plot=False)
+    _, y_preds_36_original, _, _, t_list_36_original = predict_random_combo_not_repeat(model_depends, models_original[2:], test_data, timesteps = timesteps, to_plot=False)
+        
+num_lines = 100
 mse_list_depends = list()
 mse_list_original = list()
 t_list_list = list()
@@ -438,8 +463,8 @@ ts_original, means_original, stds_original = find_ave_random_paths(t_list_list, 
 
 plt.figure()
 for i in range(len(mse_list_depends)):
-    plt.semilogy(t_list_list[i], mse_list_depends[i], 'r', linewidth = 0.25, alpha = 0.05)#, label = path_list[i])
-    plt.semilogy(t_list_list[i], mse_list_original[i], 'b', linewidth = 0.25, alpha=0.05)#, label = path_list[i])
+    plt.semilogy(t_list_list[i], mse_list_depends[i], 'r', linewidth = 0.25, alpha = 0.5)#, label = path_list[i])
+    plt.semilogy(t_list_list[i], mse_list_original[i], 'b', linewidth = 0.25, alpha=0.5)#, label = path_list[i])
 
 plt.semilogy(ts_depends, means_depends[:,0], color='darkred', label="depends")
 plt.semilogy(ts_original, means_original[:,0], color='navy', label="original")
@@ -447,15 +472,27 @@ plt.legend()
 plt.title(system + ": MSE : noise = " + str(noise) + ": " + str(num_lines) + " random paths :step_sizes = "+str(step_sizes))
 plt.savefig("{}_{}_min{}_MSE_both_n{}_all.jpg".format(system, letter, min(step_sizes), noise))
 
-plt.figure()
-plt.plot(test_data[0,:timesteps], 'g', linewidth = 0.5)
-for i in range(len(t_list_list)):
-    plt.plot(t_list_list[i], y_pred_list_depends[i], 'r', linewidth = 0.25, alpha = 0.05)
-    plt.plot(t_list_list[i], y_pred_list_original[i], 'b', linewidth = 0.25, alpha = 0.05)
+if ndim < 3:
+    plt.figure()
+    plt.plot(test_data[0,:timesteps], 'g', linewidth = 0.5)
+    for i in range(len(t_list_list)):
+        plt.plot(t_list_list[i], y_pred_list_depends[i], 'r', linewidth = 0.25, alpha = 0.05)
+        plt.plot(t_list_list[i], y_pred_list_original[i], 'b', linewidth = 0.25, alpha = 0.05)
 
-plt.title(system + ": Predicted 1 path : noise = " + str(noise) +" :step_sizes = "+str(step_sizes))
-plt.savefig("{}_{}_min{}_both_predict_first_n{}.jpg".format(system, letter, min(step_sizes), noise))
-
+    plt.title(system + ": Predicted 1 path : noise = " + str(noise) +" :step_sizes = "+str(step_sizes))
+    plt.savefig("{}_{}_min{}_both_predict_first_n{}.jpg".format(system, letter, min(step_sizes), noise))
+else:
+    idx = 1
+    print("y_pred_list_depends[i] shape = ", y_pred_list_depends[0].shape)
+    plt.figure()
+    plt.plot(test_data[0,:timesteps, idx], 'g', linewidth = 0.5)
+    for i in range(len(t_list_list)):
+        plt.plot(t_list_list[i], y_pred_list_depends[i][:,idx], 'r', linewidth = 0.5, alpha = 0.5)
+        plt.plot(t_list_list[i], y_pred_list_original[i][:,idx], 'b', linewidth = 0.5, alpha = 0.5)
+        
+    plt.ylim([np.min(test_data[0,:,idx]), np.max(test_data[0,:,idx])])
+    plt.title(system + ": Predicted 1 path, idx = "+str(idx)+": noise = " + str(noise) +" :step_sizes = "+str(step_sizes))
+    plt.savefig("{}_{}_min{}_both_predict_first_n{}.jpg".format(system, letter, min(step_sizes), noise))
 
 
 # want a plot with of the first test plot. Where the predicted has average of all paths in thick line and shaded for 1 and 2 stds. 
@@ -540,15 +577,42 @@ if ndim == 3:
 
 
 #plot just 1
-plt.figure()
-plt.plot(test_data[0,:timesteps], 'g', label = 'test_data')
-# plt.plot(ts, means_depends, 'r-', label = "depends means")
-# plt.plot(ts, means_original, 'b-', label = "original means")
-plt.plot(t_list_list[0], y_pred_list_depends[0], 'r', label = "depends 1 path")
-plt.plot(t_list_list[0], y_pred_list_original[0], 'b', label = "original 1 path")
+if ndim < 3:
+    plt.figure()
+    plt.plot(test_data[0,:timesteps], 'g', label = 'test_data')
+    # plt.plot(ts, means_depends, 'r-', label = "depends means")
+    # plt.plot(ts, means_original, 'b-', label = "original means")
+    plt.plot(t_list_list[0], y_pred_list_depends[0], 'r', label = "depends 1 path")
+    plt.plot(t_list_list[0], y_pred_list_original[0], 'b', label = "original 1 path")
+else:
+    plt.figure()
+    plt.plot(test_data[0,:timesteps, idx], 'g', label = 'test_data')
+    # plt.plot(ts, means_depends, 'r-', label = "depends means")
+    # plt.plot(ts, means_original, 'b-', label = "original means")
+    plt.plot(t_list_list[0], y_pred_list_depends[0][ :,idx], 'r', label = "depends 1 path")
+    plt.plot(t_list_list[0], y_pred_list_original[0][ :, idx], 'b', label = "original 1 path")
+    
+    print("y_preds_36_depends shape = ", y_preds_36_depends.shape)
+    print("y_preds_36_original shape = ", y_preds_36_original.shape)
+    plt.plot(t_list_36_depends, y_preds_36_depends[0,:,idx])
+    plt.plot(t_list_36_original, y_preds_36_original[0, :,idx])
 
+plt.ylim([np.min(test_data[0,:,idx]), np.max(test_data[0,:,idx])])
 # plt.legend()
 plt.title(system + ": Predicted 1 path: noise = " + str(noise) +" :step_sizes = "+str(step_sizes))
 plt.savefig("{}_{}_min{}_both_1_path_n{}.jpg".format(system, letter, min(step_sizes), noise))
 
+
+#make spacial figures
+if spacial == True:
+    fig, axs = plt.subplots(1, 3, figsize=(10, 3))
+    vmin = np.min(test_data)
+    vmax = np.max(test_data)
+    axs[0].imshow(test_data[0,:timesteps], vmin=vmin, vmax=vmax)
+    axs[1].imshow(y_preds_all_original[0,:timesteps], vmin=vmin, vmax=vmax)
+    axs[2].imshow(y_preds_all_depends[0,:timesteps], vmin=vmin, vmax=vmax)
+    
+    
+    fig.suptitle(system + ": noise = " + str(noise) +" :step_sizes = "+str(step_sizes))
+    plt.savefig("{}_{}_min{}_spacial_plots_n{}.jpg".format(system, letter, min(step_sizes), noise))
 

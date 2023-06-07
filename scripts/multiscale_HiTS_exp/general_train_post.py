@@ -223,7 +223,7 @@ def find_ave_random_paths(t_list_list, mse_list):
         for j in range(len(t_list_list[i])):
             to_ave[i, int(t_list_list[i][j])] = mse_list[i][j]
 
-    averages = np.zeros(10000)
+#     averages = np.zeros(10000)
     to_ave[to_ave == 0] = np.nan
     means = np.nanmean(to_ave[:, 1:], axis=0)
     stds = np.nanstd(to_ave[:, 1:], axis=0)
@@ -240,8 +240,9 @@ def predict_random_combo_not_repeat(models, test_data, timesteps = 5000, to_plot
 
 #     step_sizes = [8, 16]
     t = 0
-    n_test_points, _, ndim = test_data.shape
+    n_test_points, n_timepoints, ndim = test_data.shape
 
+    timesteps = min(timesteps, n_timepoints)
 
     t_list = list()
     y_pred_list = list()
@@ -253,16 +254,16 @@ def predict_random_combo_not_repeat(models, test_data, timesteps = 5000, to_plot
         if sum(steps)>timesteps:
             break
     
-    y_pred_list = np.zeros((n_test_points, len(steps)-1, ndim))
+    y_pred_list = np.zeros((n_test_points, len(steps)-2, ndim))
     y_preds = torch.tensor(test_data[:, 0]).float()
 
-    for i in range(len(steps)-1):
+    for i in range(len(steps)-2):
         this_pick = indices[i]
         this_step_size = steps[i]
         t+= this_step_size
         y_preds = models.forward(y_preds, str(this_step_size))
 
-        y_pred_list[:,i-1] = y_preds.detach().numpy()
+        y_pred_list[:,i] = y_preds.detach().numpy()
         t_list.append(t)
         
     t_list = np.array(t_list)
@@ -273,6 +274,7 @@ def predict_random_combo_not_repeat(models, test_data, timesteps = 5000, to_plot
         plt.plot(t_list, test_data[0,t_list.astype(int), 0])
         plt.title("step_size = " + str(step_size)+ ": noise = "+ str(noise))
         plt.show()
+    
     
     mse = np.mean((y_pred_list - test_data[:,t_list.astype(int)])**2, axis = (0,2))
     if to_plot:
@@ -292,12 +294,21 @@ def predict_random_combo_not_repeat(models, test_data, timesteps = 5000, to_plot
 #     noise = 0.1                  # noise percentage: 0.00, 0.01 or 0.02
 #     letter = 'a'
 
+override_step_list = True
 step_sizes = [4, 8, 216]#[4, 8, 216]
 if system == 'KS' or system == "KS_new":
     smallest_step = 4
     dt = 0.025
     arch = [512, 2048, 512]
     step_sizes = [4, 8, 216]
+    
+elif 'fluid' in system:
+    n_forward = 3
+    override_step_list = False
+#     smallest_step = 6#1
+    dt = 0.025
+    step_sizes  = [1, 4, 16]
+    
 elif system == "VanDerPol":
     smallest_step = 4
     dt = 0.01
@@ -331,9 +342,11 @@ else:
     print("system not available")
     raise SystemExit()
 
+    
 if args.small > 0:
     smallest_step = args.small
-    step_sizes = [smallest_step, smallest_step*2, smallest_step*4]
+    if override_step_list:
+        step_sizes = [smallest_step, smallest_step*2, smallest_step*4]
     
 n_poss = 1773
 
@@ -407,7 +420,7 @@ for step_size in step_sizes:
     t_list_single.append(t_list)
 
 #get multiscale stepper   
-n_steps = 5000
+n_steps = min(5000, test_data.shape[1]-1)
 y_preds = vectorized_multi_scale_forecast(torch.tensor(test_data[:, 0, :]).float(), n_steps, model, step_sizes = step_sizes[::-1])
 
 all_combos = np.load('all_combos_'+str(smallest_step)+'.npy', allow_pickle=True)
@@ -422,11 +435,24 @@ y_pred_list = list()
 for i in range(num_lines):
     print("i = ", i)
 #     y_preds_random, mse_random, t_list_random, path_random = predict_random_combo(model, test_data, to_plot = False,  timesteps = 5000)
-    y_preds_random, mse_random, t_list_random = predict_random_combo_not_repeat(model, test_data, timesteps = 5000, to_plot=False)
+    y_preds_random, mse_random, t_list_random = predict_random_combo_not_repeat(model, test_data, timesteps = n_steps, to_plot=False)
     y_pred_list.append(y_preds_random[0,:])
     mse_list.append(mse_random)
     t_list_list.append(t_list_random)
 #     path_list.append(path_random)
+
+#plot first predicted
+plt.figure()
+plt.plot(t_list_random, y_preds_random[0, :, 1])
+plt.plot(test_data[0, :, 1])
+print("y_pred_list_single[0] shape = ", y_pred_list_single[0].shape)
+plt.plot(t_list_single[0], y_pred_list_single[0][ 0, :, 1])
+plt.plot(t_list_single[1], y_pred_list_single[1][ 0, :, 1])
+plt.plot(t_list_single[2], y_pred_list_single[2][0, :, 1])
+
+plt.plot(y_preds[0,:,1], 'k')
+plt.savefig("just_1_dim_pred.pdf")
+
 
 ts, means, stds = find_ave_random_paths(t_list_list, mse_list)
 
@@ -441,6 +467,8 @@ labels = ["small", "mid", "large"]
 for i in range(len(y_pred_list_single)):
     plt.semilogy(t_list_single[i], mse_list_single[i],  label = labels[i])
 
+print("y_preds shape = ", y_preds.shape)
+print("test_data shape =", test_data.shape)
 mse = torch.mean((y_preds - torch.tensor(test_data[:, 1:1+n_steps, :]).float())**2, axis = (0,2))
 plt.semilogy(mse, 'k', label = "multiscale")
 plt.semilogy(ts, means[:,0], label="average")
@@ -448,10 +476,12 @@ plt.legend()
 plt.title(system + ": MSE : noise = " + str(noise) + ": " + str(num_lines) + " random paths :step_sizes = "+str(step_sizes))
 plt.savefig("{}_{}_MSE_n{}_all.pdf".format(system, letter, noise))
 
+idx = 1
 plt.figure()
+print("y_pred_list[i] shape = ", y_pred_list[0].shape)
 for i in range(len(y_pred_list)):
-    plt.plot(t_list_list[i], y_pred_list[i], 'r')
-plt.plot(test_data[0,1:], 'b')
+    plt.plot(t_list_list[i], y_pred_list[i][:,idx], 'r')
+plt.plot(test_data[0,:, idx], 'b')
 plt.title(system + ": Predicted 1 path : noise = " + str(noise) +" :step_sizes = "+str(step_sizes))
 plt.savefig("{}_{}_predict_first_n{}.pdf".format(system, letter, noise))
 
