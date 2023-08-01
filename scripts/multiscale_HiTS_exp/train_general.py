@@ -89,6 +89,23 @@ elif 'fluid' in system:
     step_sizes  = [1, 4, 16]
     combos_file = "all_combos_fluid4.npy"
     
+elif 'flower' in system:
+    n_forward = 3
+    override_step_list = False
+    dt = 0.025
+    arch = [ndim, 128, ndim]
+    step_sizes  = [1, 4, 16]
+    combos_file = "all_combos_fluid4.npy"
+    
+elif 'Bach' in system:
+    n_forward = 3
+    override_step_list = False
+    dt = 0.025
+    arch = [ndim, 2048, ndim]
+    step_sizes  = [1, 5, 25]
+    combos_file = "all_combos_5.npy"
+    print('combos_file = ', combos_file)
+    
 elif "VanDerPol" in system:
     smallest_step = 4
     dt = 0.01
@@ -165,4 +182,4 @@ n_forward = min(int(np.max(step_sizes)*4/np.min(step_sizes)) + 1, int(train_data
 print("n_forward = ", n_forward)
 dataset = net.DataSet(train_data, val_data, test_data, dt, smallest_step, n_forward)
 model.train_net(dataset, max_epoch=max_epoch, batch_size=batch_size, lr=lr,
-                model_path=os.path.join(model_dir, model_name), print_every=10)
+                model_path=os.path.join(model_dir, model_name), print_every=1)
