@@ -1,11 +1,9 @@
-import torch
-import numpy as np
-import scipy.interpolate
-from utils_multiscale import DataSet
+
 import time
-import itertools
-import random
-import sys
+
+import numpy as np
+import torch
+import scipy.interpolate
 
 
 class NNBlock(torch.nn.Module):
@@ -38,7 +36,7 @@ class NNBlock(torch.nn.Module):
 
 
 class ResNet(torch.nn.Module):
-    def __init__(self, arch, dt, step_sizes, activation=torch.nn.ReLU(), n_poss = 25, combos_file = None):
+    def __init__(self, arch, dt, step_sizes, activation=torch.nn.ReLU(), n_poss=25, combos_file=None):
         """
         :param arch: a list that provides the architecture
         :param dt: time step unit
@@ -91,51 +89,6 @@ class ResNet(torch.nn.Module):
             
         self.best_loss = 1e+5
         
-#         self.count_times_picked = torch.zeros(1317)
-        
-#     def make_all_combos(self, max_repeat=4, target_list=None, file_name=None):
-#         '''
-#             Makes a list of all possible combinations to test
-#         '''
-        
-#         if target_list is None:
-#             target_list = np.arange(np.min(self.step_sizes)*2, np.max(self.step_sizes) * max_repeat, np.min(self.step_sizes))
-            
-#         print("target_list = ", target_list)
-#         all_combos = list()
-#         for target in target_list:
-            
-#             print("!=================================================================")
-#             print("target = ", target)
-
-#             #get all combinations of the step_sizes that sum to target
-#             #https://stackoverflow.com/questions/34517540/find-all-combinations-of-a-list-of-numbers-with-a-given-sum
-#             result = [seq for i in range(target, 0, -1)
-#                       for seq in itertools.combinations_with_replacement(self.step_sizes, i)
-#                       if sum(seq) == target]
-            
-#             result = np.array(result)
-
-#             #filter out things that have 5 of the same number
-#             idx_keep = list()
-#             for i, value in enumerate(result):
-#                 if (np.count_nonzero(np.array(value) == self.step_sizes[0]) < max_repeat):
-#                     idx_keep.append(i)
-
-#             result_less = result[idx_keep]
-
-#             # Find all permutations
-#             for this_poss in result_less:
-#                 for i in list(itertools.permutations(this_poss)):
-#                     if i not in all_combos:
-#                         try:
-#                             all_combos.append(i)
-#                         except:
-#                             np.append(all_combos, i)
-#             print("len all_combos = ", len(all_combos))
-            
-            
-#         return all_combos
 
     def check_data_info(self, dataset):
         """
@@ -147,13 +100,13 @@ class ResNet(torch.nn.Module):
         assert self.dt == dataset.dt
         assert self.step_size == dataset.step_size
 
-    def forward(self, x_init, type):
+    def forward(self, x_init, size):
         """
         :param x_init: array of shape batch_size x input_dim
-        type: type of step size, small, mid, large
+        :param type: type of step size, small, mid, large
         :return: next step prediction of shape batch_size x input_dim
         """
-        return x_init + self._modules[type](x_init)
+        return x_init + self._modules[size](x_init)
 
     def uni_scale_forecast(self, x_init, n_steps):
         """
@@ -232,7 +185,7 @@ class ResNet(torch.nn.Module):
             if epoch % print_every == 0:
                 val_loss = self.calculate_loss(dataset.val_x, dataset.val_ys, w=w, limit=False)
                 print('epoch {}, training loss {}, validation loss {}, best_loss {}'.format(epoch, train_loss.item(),
-                                                                              val_loss.item(), self.best_loss))
+                                                                                            val_loss.item(), self.best_loss))
                 self.train_errors.append(train_loss.item())
                 self.val_errors.append(val_loss.item())
         
@@ -256,55 +209,6 @@ class ResNet(torch.nn.Module):
             print('--> new model saved @ epoch {}'.format(epoch))
             torch.save(self, model_path)
 
-#     def calculate_loss(self, x, ys, w=1.0, limit=True):
-#         """
-#         :param x: x batch, array of size batch_size x n_dim
-#         :param ys: ys batch, array of size batch_size x n_steps x n_dim
-#         :return: overall loss
-#         """
-#         batch_size, n_steps, n_dim = ys.size()
-# #         print("ys.size()=", ys.size())
-# #         batch_size, n_dim = ys.size()
-#         assert n_dim == self.n_dim
-    
-#         criterion = torch.nn.MSELoss(reduction='none')
-#         loss = 0.0
-                  
-#         possibilities = len(self.all_combos)
-        
-
-#         for i in range(possibilities):
-#             j_list = list()
-#             y_preds = list()
-            
-#             y_preds = torch.zeros((batch_size, len(self.all_combos[i]),n_dim))
-#             y_next = x
-#             step = 0
-# #             step = self.all_combos[i][0]
-# #             y_next = self.forward(x, str(self.all_combos[i][0]))
-# #             y_preds[:,0] = y_next
-# #             j_list.append(int(step/min(self.step_sizes)))
-            
-#             for j in range(len(self.all_combos[i])):
-#                 step = step + self.all_combos[i][j]
-#                 y_next = self.forward(y_next, str(self.all_combos[i][j]))
-                
-#                 y_preds[:,j,:] = y_next
-#                 j_list.append(int(step/min(self.step_sizes)))
-                
-#             #add the amount of loss
-# #             print("y_preds= ", y_preds.shape)
-# #             print("j_list = ", j_list)
-# #             print("j_list.shape = ", len(j_list))
-# #             print("ys[:,j_list,:] = ", ys[:,j_list,:].shape)
-            
-#             loss += criterion(y_preds, ys[:,j_list,:]).mean()
-# #             print("loss = ", loss.mean())
-            
-# #             loss += criterion(y_next, ys[:,int(sum(self.all_combos[i])/min(self.step_sizes)) - 1,:])
-                  
-#         return loss
-
 
     def calculate_loss(self, x, ys, w=1.0, limit=True):
         """
@@ -313,57 +217,32 @@ class ResNet(torch.nn.Module):
         :return: overall loss
         """
         batch_size, n_steps, n_dim = ys.size()
-#         batch_size, n_dim = ys.size()
         assert n_dim == self.n_dim
     
         criterion = torch.nn.MSELoss(reduction='none')
         loss = 0.0
                   
-#         possibilities = len(self.all_combos)
-        
-#         if limit:
-#             try:
-#                 points_this = random.sample(range(possibilities), self.n_poss)
-#             except:
-#                 points_this = random.sample(range(possibilities), 25)
-#         else:
-#             points_this = range(possibilities)
-            
         
         for i in range(len(self.all_combos)):
             t_list = list()
             y_next = self.forward(x, str(self.all_combos[i][0]))
             y_preds = torch.zeros(batch_size, len(self.all_combos[i]), n_dim).float().to(self.device)
-            y_preds[:,0] = y_next
+            y_preds[:, 0] = y_next
             
             t = int(self.all_combos[i][0]/min(self.step_sizes))
             t_list.append(t)
-#             print("len(self.all_combos[i])= ", self.all_combos[i])
             for j in range(1, len(self.all_combos[i])):
                 y_next = self.forward(y_next, str(self.all_combos[i][j]))
-                y_preds[:,j] = y_next
+                y_preds[:, j] = y_next
                 t += int(self.all_combos[i][j]/min(self.step_sizes))
                 t_list.append(t)
-#                 t_list.append(int(self.all_combos[i][j]/min(self.step_sizes)))
-            #add the amount of loss
-#             print("self.all_combos[i] = ", self.all_combos[i])
-#             print("t_list = ", t_list)
-#             print("y_preds shape =", y_preds.shape)
-#             print("ys[:,t_list,:] shape = ", ys[:,t_list,:].shape)
-#             print("loss = ", criterion(y_preds, ys[:,t_list,:]))
-#             loss += criterion(y_preds, ys[:,self.all_combos[i]/min(self.step_sizes),:])
-#             try:
-#                 print("loss shape = ", criterion(y_preds, ys[:,t_list,:]).mean().shape)
-            loss += criterion(y_preds, ys[:,t_list,:]).mean()
-            
+                
+            loss += criterion(y_preds, ys[:, t_list, :]).mean()
 
-#             loss += criterion(y_next, ys[:,int(sum(self.all_combos[i])/min(self.step_sizes)) - 1,:])
-                  
-    
         return loss.mean()
         
         
-    def train_net_single(self, dataset, max_epoch, batch_size, w=1.0, lr=1e-3, model_path=None, print_every=1000, type='4'):
+    def train_net_single(self, dataset, max_epoch, batch_size, w=1.0, lr=1e-3, model_path=None, print_every=1000, size='4'):
         """
         :param dataset: a dataset object
         :param max_epoch: maximum number of epochs
@@ -389,8 +268,8 @@ class ResNet(torch.nn.Module):
             batch_x = dataset.train_x[new_idxs[:batch_size], :]
             batch_ys = dataset.train_ys[new_idxs[:batch_size], :, :]
             # =============== calculate losses ================
-            train_loss = self.calculate_loss_single(batch_x, batch_ys, w=w, type=type)
-            val_loss = self.calculate_loss_single(dataset.val_x, dataset.val_ys, w=w, type=type)
+            train_loss = self.calculate_loss_single(batch_x, batch_ys, w=w, size=size)
+            val_loss = self.calculate_loss_single(dataset.val_x, dataset.val_ys, w=w, size=size)
             # ================ early stopping =================
             if best_loss <= 1e-8:
                 print('--> model has reached an accuracy of 1e-8! Finished training!')
@@ -419,7 +298,7 @@ class ResNet(torch.nn.Module):
             print('--> new model saved @ epoch {}'.format(epoch))
             torch.save(self, model_path)
 
-    def calculate_loss_single(self, x, ys, w=1.0, type=type):
+    def calculate_loss_single(self, x, ys, w=1.0, size=size):
         """
         :param x: x batch, array of size batch_size x n_dim
         :param ys: ys batch, array of size batch_size x n_steps x n_dim
@@ -432,7 +311,7 @@ class ResNet(torch.nn.Module):
         y_preds = torch.zeros(batch_size, n_steps, n_dim).float().to(self.device)
         y_prev = x
         for t in range(n_steps):
-            y_next = self.forward(y_prev, type)
+            y_next = self.forward(y_prev, size)
             y_preds[:, t, :] = y_next
             y_prev = y_next
 
@@ -443,7 +322,7 @@ class ResNet(torch.nn.Module):
         return loss
 
 
-    def vectorized_multi_scale_forecast(self, x_init, n_steps, models, step_sizes = [8,4]):
+    def vectorized_multi_scale_forecast(self, x_init, n_steps, models, step_sizes=[8, 4]):
         """
         :param x_init: initial state torch array of shape n_test x n_dim
         :param n_steps: number of steps forward in terms of dt
@@ -470,15 +349,15 @@ class ResNet(torch.nn.Module):
         preds[:, 0, :] = x_init
         total_step_sizes = n_steps
 #         for model in models:
-        type_models = ['large', 'small']
-        for i in [0,1]:
+        size_models = ['large', 'small']
+        for i in [0, 1]:
             step_size = step_sizes[i]
-            type_model = type_models[i]
+            size_model = size_models[i]
             n_forward = int(total_step_sizes/step_size)
             y_prev = preds[:, indices, :].reshape(-1, n_dim)
             indices_lists = [indices]
             for t in range(n_forward):
-                y_next = self.forward(y_prev, type_model)
+                y_next = self.forward(y_prev, size_model)
                 shifted_indices = [x + (t + 1) * step_size for x in indices]
                 indices_lists.append(shifted_indices)
                 preds[:, shifted_indices, :] = y_next.reshape(n_test, -1, n_dim)
@@ -491,8 +370,8 @@ class ResNet(torch.nn.Module):
         y_prev = preds[:, last_idx, :]
         while last_idx < n_steps:
             last_idx += step_size[-1]
-            type_model = type_models[-1]
-            y_next = mself.forward(y_prev, type_model)
+            size_model = size_models[-1]
+            y_next = self.forward(y_prev, size_model)
             preds[:, last_idx, :] = y_next
             indices.append(last_idx)
             y_prev = y_next
@@ -504,10 +383,3 @@ class ResNet(torch.nn.Module):
         y_preds = torch.tensor(cs(sample_steps)).float()
 
         return y_preds
-
-
-
-
-
-
-

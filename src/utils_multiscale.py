@@ -1,6 +1,9 @@
+"""
+    Make the dataset that will be used by Resnet
+"""
 import torch
-import random
 import numpy as np
+
 
 
 class DataSet:
@@ -16,7 +19,7 @@ class DataSet:
         """
         n_train, train_steps, n_dim = train_data.shape
         n_val, val_steps, _ = val_data.shape
-        n_test, test_steps, _ = test_data.shape
+        n_test, _, _ = test_data.shape
         assert step_size*n_forward+1 <= train_steps and step_size*n_forward+1 <= val_steps
 
         # params
@@ -41,3 +44,26 @@ class DataSet:
         self.val_ys = torch.tensor(val_data[:, y_start_idx:y_end_idx:step_size, :]).float().to(self.device)
         self.test_x = torch.tensor(test_data[:, 0, :]).float().to(self.device)
         self.test_ys = torch.tensor(test_data[:, 1:, :]).float().to(self.device)
+
+
+        
+        
+def make_dataset_one_stream(data, n_forward=5, step_sizes=[1, 2, 4], dt=1):
+    """
+        When data is from 1 stream, break into as many streams as possible, for ensemble
+        This one makes training, validation and testing all the same
+    """
+
+    # training
+    n_steps = data.shape[0] - 1  # number of forward steps
+
+    m = int(np.ceil(n_steps/(max(step_sizes)*n_forward)))
+    pdata = np.zeros((m, max(step_sizes)*n_forward+1, data.shape[1]))
+    for i in range(m):
+        start_idx = i*max(step_sizes)*n_forward
+        end_idx = start_idx + max(step_sizes)*n_forward + 1
+        tmp = data[start_idx:end_idx, :]
+        pdata[i, :tmp.shape[0], :] = tmp
+    dataset = DataSet(pdata, pdata, pdata, dt, min(step_sizes), n_forward)
+    
+    return dataset
