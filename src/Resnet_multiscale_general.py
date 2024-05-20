@@ -298,7 +298,7 @@ class ResNet(torch.nn.Module):
             print('--> new model saved @ epoch {}'.format(epoch))
             torch.save(self, model_path)
 
-    def calculate_loss_single(self, x, ys, w=1.0, size=size):
+    def calculate_loss_single(self, x, ys, w=1.0, size='1'):
         """
         :param x: x batch, array of size batch_size x n_dim
         :param ys: ys batch, array of size batch_size x n_steps x n_dim
