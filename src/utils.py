@@ -4,7 +4,7 @@ import numpy as np
 
 
 class DataSet:
-    def __init__(self, train_data, val_data, test_data, dt, step_size, n_forward, backward = False):
+    def __init__(self, train_data, val_data, test_data, dt, step_size, n_forward, input_forward=1, backward=False):
         """
         :param train_data: array of shape n_train x train_steps x input_dim
                             where train_steps = max_step x (n_steps + 1)
@@ -37,15 +37,29 @@ class DataSet:
             test_data = np.flip(test_data,axis=1).copy()
         # data
 #         if not backward:
+#         x_idx = 0
+#         x_end_idx = x_idx + step_size*input_forward 
+#         print("x_end_idx = ", x_end_idx)
+#         y_start_idx = x_end_idx + step_size
+#         print("y_start_idx = ", y_start_idx)
+#         y_end_idx = x_end_idx + step_size*n_forward + 1
+
         x_idx = 0
-        y_start_idx = x_idx + step_size
-        y_end_idx = x_idx + step_size*n_forward + 1
-        self.train_x = torch.tensor(train_data[:, x_idx, :]).float().to(self.device)
+        x_end_idx = x_idx + step_size*input_forward
+        y_start_idx = x_end_idx
+        y_end_idx = x_end_idx + step_size*n_forward 
+        
+        self.train_x = torch.tensor(train_data[:, x_idx:x_end_idx:step_size, :]).float().to(self.device)
         self.train_ys = torch.tensor(train_data[:, y_start_idx:y_end_idx:step_size, :]).float().to(self.device)
-        self.val_x = torch.tensor(val_data[:, x_idx, :]).float().to(self.device)
+        self.val_x = torch.tensor(val_data[:, x_idx:x_end_idx:step_size, :]).float().to(self.device)
         self.val_ys = torch.tensor(val_data[:, y_start_idx:y_end_idx:step_size, :]).float().to(self.device)
-        self.test_x = torch.tensor(test_data[:, 0, :]).float().to(self.device)
+        self.test_x = torch.tensor(test_data[:, x_idx:x_end_idx:step_size, :]).float().to(self.device)
         self.test_ys = torch.tensor(test_data[:, 1:, :]).float().to(self.device)
+        
+        print("self.train_x = ", self.train_x.shape)
+        print("self.train_ys = ", self.train_ys.shape)
+        print("self.val_x = ", self.val_x.shape)
+        print("self.test_x = ", self.test_x.shape)
 
 #         if backward:
 #             # data

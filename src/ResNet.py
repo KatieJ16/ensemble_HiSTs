@@ -3,6 +3,7 @@ import numpy as np
 import scipy.interpolate
 from utils import DataSet
 import time
+import matplotlib.pyplot as plt
 
 
 class NNBlock(torch.nn.Module):
@@ -46,10 +47,12 @@ class ResNet(torch.nn.Module):
 
         # check consistencies
         assert isinstance(arch, list)
-        assert arch[0] == arch[-1]
+#         assert arch[0] == arch[-1]
 
         # param
-        self.n_dim = arch[0]
+        self.input_dim = arch[-1]
+        self.input_forward = int(arch[0]/arch[-1])
+#         self.n_dim = arch[0]
 
         # data
         self.dt = dt
@@ -61,13 +64,17 @@ class ResNet(torch.nn.Module):
         # layer
         self.activation = activation
         self.add_module('increment', NNBlock(arch, activation=activation))
+        
+        #save error lists
+        self.train_error_list = list()
+        self.val_error_list = list()
 
     def check_data_info(self, dataset):
         """
         :param: dataset: a dataset object
         :return: None
         """
-        assert self.n_dim == dataset.n_dim
+#         assert self.n_dim == dataset.n_dim
         assert self.dt == dataset.dt
         assert self.step_size == dataset.step_size
 
@@ -76,7 +83,7 @@ class ResNet(torch.nn.Module):
         :param x_init: array of shape batch_size x input_dim
         :return: next step prediction of shape batch_size x input_dim
         """
-        return x_init + self._modules['increment'](x_init)
+        return x_init[:,(self.input_forward-1)*self.input_dim:] + self._modules['increment'](x_init)
 
     def uni_scale_forecast(self, x_init, n_steps):
         """
@@ -88,22 +95,37 @@ class ResNet(torch.nn.Module):
         preds = list()
         sample_steps = range(n_steps)
 
+        cur_step = 0
+        for i in range(len(x_init[0])):
+            preds.append(x_init[:,i].float().to(self.device))
+            steps.append(cur_step)
+            cur_step += self.step_size
+            
         # forward predictions
-        x_prev = x_init
-        cur_step = self.step_size - 1
+        x_prev = x_init.reshape(len(x_init), self.input_dim * self.input_forward)
+#         print("x_prev shape = ", x_prev[0])
+#         cur_step = self.step_size - 1
         while cur_step < n_steps + self.step_size:
             x_next = self.forward(x_prev)
+#             print("x_next shape = ", x_next[0])
             steps.append(cur_step)
             preds.append(x_next)
             cur_step += self.step_size
-            x_prev = x_next
+#             x_prev = x_next
+            x_prev = torch.cat((x_prev[:,self.input_dim:], x_next), dim=1)
+#             print("x_prev shape = ", x_prev[0])
+        
+#             hjk
 
         # include the initial frame
-        steps.insert(0, 0)
-        preds.insert(0, torch.tensor(x_init).float().to(self.device))
+#         steps.insert(0, 0)
+#         preds.insert(0, torch.tensor(x_init).float().to(self.device))
 
         # interpolations
         preds = torch.stack(preds, 2).detach().numpy()
+        print("preds shape = ", preds.shape) 
+        print("steps shape = ", len(steps))
+#         y_preds = preds
         cs = scipy.interpolate.interp1d(steps, preds, kind='linear')
         y_preds = torch.tensor(cs(sample_steps)).transpose(1, 2).float()
 
@@ -131,12 +153,13 @@ class ResNet(torch.nn.Module):
             epoch += 1
             # ================= prepare data ==================
             n_samples = dataset.n_train
-            new_idxs = torch.randperm(n_samples)
-            batch_x = dataset.train_x[new_idxs[:batch_size], :]
+            new_idxs = torch.arange(n_samples)#torch.randperm(n_samples)
+#             batch_x = dataset.train_x[new_idxs[:batch_size], :]
+            batch_x = dataset.train_x[new_idxs[:batch_size], :].reshape(len(new_idxs[:batch_size]), self.input_dim * self.input_forward)
             batch_ys = dataset.train_ys[new_idxs[:batch_size], :, :]
             # =============== calculate losses ================
             train_loss = self.calculate_loss(batch_x, batch_ys, w=w)
-            val_loss = self.calculate_loss(dataset.val_x, dataset.val_ys, w=w)
+            val_loss = self.calculate_loss(dataset.val_x.reshape(len(dataset.val_x), self.input_dim * self.input_forward), dataset.val_ys, w=w)
             # ================ early stopping =================
             if best_loss <= 1e-8:
                 print('--> model has reached an accuracy of 1e-8! Finished training!')
@@ -151,9 +174,11 @@ class ResNet(torch.nn.Module):
                 end_time = time.time()
                 print("time for first 10 = ", end_time - start_time)
             
-            if epoch % 1000 == 0:
+            if epoch % 100 == 0:
                 print('epoch {}, training loss {}, validation loss {}'.format(epoch, train_loss.item(),
                                                                               val_loss.item()))
+                self.train_error_list.append(train_loss.item())
+                self.val_error_list.append(val_loss.item())
                 if val_loss.item() < best_loss:
                     best_loss = val_loss.item()
                     if model_path is not None:
@@ -171,22 +196,41 @@ class ResNet(torch.nn.Module):
         :param ys: ys batch, array of size batch_size x n_steps x n_dim
         :return: overall loss
         """
+        
+#         print("x.shape = ", x.shape)
         batch_size, n_steps, n_dim = ys.size()
-        assert n_dim == self.n_dim
+        assert n_dim == self.input_dim
 
         # forward (recurrence)
         y_preds = torch.zeros(batch_size, n_steps, n_dim).float().to(self.device)
-        y_prev = x
+        
+#         print("x = ", x[0])
+#         y_prev = x
         for t in range(n_steps):
-            y_next = self.forward(y_prev)
+            y_next = self.forward(x)
+#             print("y_next = ", y_next[0])
             y_preds[:, t, :] = y_next
-            y_prev = y_next
+#             print("y_preds = ", y_preds[0])
+            x = torch.cat((x[:,self.input_dim:], y_next), dim=1)
+#             print("x = ", x[0])
 
+#         print("y_preds= ", y_preds[0])
+#         print("ys= ", ys[0])
+#         tyui
         # compute loss
         criterion = torch.nn.MSELoss(reduction='none')
         loss = w * criterion(y_preds, ys).mean() + (1-w) * criterion(y_preds, ys).max()
 
+#         print("loss = ", loss)
         return loss
+
+    def plot_loss(self):
+        plt.figure()
+        plt.semilogy(self.train_error_list, label = "training")
+        plt.semilogy(self.val_error_list, label = "validation")
+        plt.legend()
+        plt.title(str(self.input_forward))
+        plt.show()
 
 
 def multi_scale_forecast(x_init, n_steps, models):
